@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
+     <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>SubjectFinder</title>
@@ -28,7 +28,7 @@
 <meta name="twitter:description" content="Find and manage subjects easily with SubjectFinder.">
 <meta name="twitter:image" content="logo.png">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
+  <style>
         *,
         *::before,
         *::after {
@@ -244,7 +244,17 @@
             opacity: .45;
             cursor: not-allowed
         }
+.auth-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
+.auth-logo {
+    width: 80px;      /* Adjust size as needed */
+    height: 80px;
+    object-fit: contain;
+}
         #app {
             display: flex;
             flex-direction: column;
@@ -403,7 +413,9 @@
             font-size: 16px;
             font-weight: 700
         }
-
+img.auth-logo {
+    margin-left: 280px;
+}
         .topnav-brand .dot {
             width: 30px;
             height: 30px;
@@ -571,7 +583,94 @@
             overflow: hidden;
             text-overflow: ellipsis
         }
+ /* SEARCH + FILTER */
+        .search-area {
+            padding: 14px 18px;
+            border-bottom: 1.5px solid var(--border);
+            flex-shrink: 0
+        }
 
+        .search-wrap {
+            position: relative;
+            max-width: 480px
+        }
+
+        .search-wrap input {
+            padding-left: 38px;
+            background: var(--surface2);
+            border-color: var(--border)
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--txt3);
+            font-size: 14px;
+            pointer-events: none
+        }
+
+        .filter-bar {
+            padding: 10px 18px;
+            border-bottom: 1.5px solid var(--border);
+            display: flex;
+            gap: 7px;
+            flex-wrap: wrap;
+            align-items: center;
+            flex-shrink: 0
+        }
+
+        .cat-chip {
+            padding: 6px 14px;
+            border-radius: 99px;
+            border: 1.5px solid var(--border);
+            background: transparent;
+            color: var(--txt2);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap
+        }
+
+        .cat-chip:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-light)
+        }
+
+        .cat-chip.active {
+            background: linear-gradient(135deg, var(--accent), var(--accent-d));
+            border-color: transparent;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(124, 106, 247, .3)
+        }
+
+        .filter-select {
+            padding: 6px 12px;
+            border-radius: 99px;
+            border: 1.5px solid var(--border);
+            background: var(--surface2);
+            color: var(--txt);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            width: auto
+        }
+
+        .panel-hd {
+            padding: 14px 18px 8px;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--txt3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between
+        }
         .si-sub {
             font-size: 11px;
             color: var(--txt3);
@@ -1529,175 +1628,157 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
-        /* ═══════════════ CONFIG ═══════════════ */
         const CFG = {
             SUPABASE_URL: 'https://gnzuvcldhnzbibcxqrez.supabase.co',
             SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImduenV2Y2xkaG56YmliY3hxcmV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyOTI3NjEsImV4cCI6MjA5Nzg2ODc2MX0.YpQHwjwlPVvBPD9MkegUiP3HxOBevWRrzaEPQFqsgdo',
-            ADMIN_SECRET: 'ADMIN2025'  // ← Change this to your secret admin registration code
+            ADMIN_SECRET: 'ADMIN2025',
+            TEACHER_SECRET: 'TEACHER2025'
         };
 
         const { createClient } = window.supabase;
         const sb = createClient(CFG.SUPABASE_URL, CFG.SUPABASE_KEY);
 
-        /* ═══════════════ STATE ═══════════════ */
+        const CATEGORIES = {
+            NSTP: { label: 'NSTP', subcats: ['LTS', 'CWTS', 'ROTC'], cls: 'cat-nstp', icon: '🎖️' },
+            GEC: { label: 'GEC', subcats: ['GEC 1', 'GEC 2', 'GEC 3', 'GEC 4', 'GEC 5', 'GEC 6', 'GEC 7'], cls: 'cat-gec', icon: '📘' },
+            PE: { label: 'PE', subcats: ['PE 1', 'PE 2', 'PE 3', 'PE 4'], cls: 'cat-pe', icon: '⚡' },
+            OTHER: { label: 'Other', subcats: [], cls: 'cat-other', icon: '📚' }
+        };
+
         const S = {
-            user: null, profile: null,
-            page: 'auth',
-            authMode: 'login',
-            isAdminSignup: false,
-            adminCode: '',
+            user: null, profile: null, page: 'auth', authMode: 'login',
+            isAdminSignup: false, isTeacherSignup: false,
             subjects: [], mySubjects: [],
             adminSubjects: [], adminUsers: [], adminRequests: [],
             adminTab: 'overview',
-            adminStats: { subjects: 0, users: 0, messages: 0, pending: 0 },
+            adminStats: { subjects: 0, users: 0, messages: 0, pending: 0, requests: 0 },
             currentSubject: null,
             messages: [], members: [],
-            searchTerm: '',
+            searchTerm: '', activeCategory: 'ALL', activeSubcategory: 'ALL',
             pendingFiles: [], scheduleFile: null, uploading: false,
-            modal: null,
-            editSubjectData: null,
-            deleteTarget: null,
-            lightboxSrc: null, lightboxType: null,
-            showMembers: false,
-            myRequests: [],
-            ivals: {}
+            modal: null, editSubjectData: null, deleteTarget: null,
+            lightboxSrc: null, lightboxType: null, showMembers: false,
+            myRequests: [], ivals: {},
+            newSubjCat: 'NSTP'
         };
 
-        /* ═══════════════ TOAST ═══════════════ */
+        // ─── UTILS ───
+        function v(id) { return (document.getElementById(id)?.value || '').trim() }
+        function rnd() { return Math.random().toString(36).slice(2, 9) }
+        function setBtn(id, dis, label) { const b = document.getElementById(id); if (b) { b.disabled = dis; b.textContent = label } }
+        function attachType(f) { return f.type.startsWith('image/') ? 'image' : f.type.startsWith('video/') ? 'video' : 'file' }
+        function fmtSize(b) { if (!b) return ''; if (b < 1024) return b + 'B'; if (b < 1048576) return (b / 1024).toFixed(1) + 'KB'; return (b / 1048576).toFixed(1) + 'MB' }
+        function tstr(ts) { return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+        function dateStr(ts) { return new Date(ts).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }) }
+        function esc(s) { if (!s) return ''; return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c])) }
+        const BG_COLORS = ['#7c6af7', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
+        function avColor(str) { let h = 0; for (let i = 0; i < (str || '').length; i++)h = (h * 31 + str.charCodeAt(i)) & 0xffffffff; return BG_COLORS[Math.abs(h) % BG_COLORS.length] }
+        function avHTML(user, cls = 'av av-sm') {
+            const name = user?.display_name || user?.email || '?';
+            const init = name.charAt(0).toUpperCase();
+            if (user?.avatar_url) return `<div class="${cls}"><img src="${esc(user.avatar_url)}" alt="${esc(name)}"></div>`;
+            return `<div class="${cls}" style="background:${avColor(name)}">${init}</div>`
+        }
+        function fileIcon(name) { const ext = (name || '').split('.').pop().toLowerCase(); return { pdf: '📄', doc: '📝', docx: '📝', xls: '📊', xlsx: '📊', ppt: '📎', pptx: '📎', zip: '🗜️', rar: '🗜️', txt: '📃' }[ext] || '📎' }
+        function scrollBottom() { setTimeout(() => { const c = document.querySelector('.msgs-scroll'); if (c) c.scrollTop = c.scrollHeight }, 60) }
+        function isAdmin() { return !!S.profile?.is_admin }
+        function isTeacher() { return !!S.profile?.is_teacher }
+        function openLightbox(src, type) { S.modal = 'lightbox'; S.lightboxSrc = src; S.lightboxType = type; render() }
+        function removePendingFile(i) { S.pendingFiles.splice(i, 1); render() }
+        function safeJson(obj) { return JSON.stringify(obj).replace(/'/g, "&#39;").replace(/"/g, '&quot;') }
+        function myRequestForSubject(sid) { return S.myRequests.find(r => r.subject_id === sid) }
+        function isMember(sid) { return S.mySubjects.some(s => s.id === sid) }
+        function catClass(cat) { return CATEGORIES[cat]?.cls || 'cat-other' }
+
         function toast(msg, type = 'info', dur = 4000) {
-            const c = document.getElementById('toastContainer');
-            if (!c) return;
-            const el = document.createElement('div');
-            el.className = `toast ${type}`;
-            el.textContent = msg;
-            c.appendChild(el);
-            setTimeout(() => { el.style.cssText = 'opacity:0;transition:opacity .3s'; setTimeout(() => el.remove(), 320); }, dur);
+            const c = document.getElementById('toastContainer'); if (!c) return;
+            const el = document.createElement('div'); el.className = `toast ${type}`; el.textContent = msg; c.appendChild(el);
+            setTimeout(() => { el.style.cssText = 'opacity:0;transition:opacity .3s'; setTimeout(() => el.remove(), 320) }, dur)
         }
 
-        /* ═══════════════ INIT ═══════════════ */
+        // ─── INTERVALS ───
+        function startIvals() {
+            clearIvals();
+            S.ivals.subj = setInterval(async () => { if (S.page === 'dashboard') { await loadSubjects(); updateDashGrid() } }, 8000);
+            S.ivals.msgs = setInterval(async () => { if (S.page === 'chat' && S.currentSubject) await loadMessages(true) }, 3000);
+            S.ivals.req = setInterval(async () => { if (S.page === 'admin' && isAdmin()) await loadAdminData() }, 12000);
+        }
+        function clearIvals() { Object.values(S.ivals).forEach(clearInterval); S.ivals = {} }
+
+        // ─── AUTH ───
         async function init() {
             try {
                 const { data: { user } } = await sb.auth.getUser();
-                if (user) {
-                    S.user = user;
-                    await loadProfile();
-                    S.page = 'dashboard';
-                    await loadMySubjects();
-                    await loadMyRequests();
-                    startIvals();
-                }
-            } catch (e) { console.error('init:', e); }
+                if (user) { S.user = user; await loadProfile(); S.page = 'dashboard'; await loadMySubjects(); await loadMyRequests(); startIvals() }
+            }
+            catch (e) { console.error('init:', e) }
             render();
-
-            document.getElementById('fileInput').addEventListener('change', e => {
-                S.pendingFiles = [...S.pendingFiles, ...Array.from(e.target.files)];
-                e.target.value = ''; render();
-            });
-            document.getElementById('avatarInput').addEventListener('change', async e => {
-                const f = e.target.files[0]; if (f) await uploadAvatar(f); e.target.value = '';
-            });
-            document.getElementById('scheduleInput').addEventListener('change', e => {
-                S.scheduleFile = e.target.files[0] || null; e.target.value = ''; render();
-            });
+            document.getElementById('fileInput').addEventListener('change', e => { S.pendingFiles = [...S.pendingFiles, ...Array.from(e.target.files)]; e.target.value = ''; render() });
+            document.getElementById('avatarInput').addEventListener('change', async e => { const f = e.target.files[0]; if (f) await uploadAvatar(f); e.target.value = '' });
+            document.getElementById('scheduleInput').addEventListener('change', e => { S.scheduleFile = e.target.files[0] || null; e.target.value = ''; render() });
         }
 
-        /* ═══════════════ INTERVALS ═══════════════ */
-        function startIvals() {
-            clearIvals();
-            S.ivals.subj = setInterval(async () => {
-                if (S.page === 'dashboard') { await loadSubjects(); updateDashGrid(); }
-            }, 7000);
-            S.ivals.msgs = setInterval(async () => {
-                if (S.page === 'chat' && S.currentSubject) await loadMessages(true);
-            }, 3000);
-            S.ivals.req = setInterval(async () => {
-                if (S.page === 'admin' && isAdmin()) {
-                    await loadAdminData();
-                    const badge = document.getElementById('pendingBadge');
-                    if (badge) badge.textContent = S.adminStats.pending;
-                }
-            }, 10000);
-        }
-        function clearIvals() { Object.values(S.ivals).forEach(clearInterval); S.ivals = {}; }
-
-        /* ═══════════════ AUTH ═══════════════ */
         async function handleLogin(e) {
             e.preventDefault();
             const email = v('authEmail'), pass = v('authPassword');
-            if (!email || !pass) { toast('Fill in all fields', 'error'); return; }
+            if (!email || !pass) { toast('Please fill in all fields', 'error'); return }
             setBtn('authBtn', true, 'Signing in…');
             try {
                 const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
                 if (error) throw error;
-                S.user = data.user;
-                await loadProfile();
-                S.page = 'dashboard';
-                await loadMySubjects();
-                await loadMyRequests();
-                startIvals();
-                render();
-            } catch (e) { toast(e.message, 'error'); }
-            finally { setBtn('authBtn', false, 'Sign In'); }
+                S.user = data.user; await loadProfile(); S.page = 'dashboard';
+                await loadMySubjects(); await loadMyRequests(); startIvals(); render()
+            } catch (e) { toast(e.message, 'error') }
+            finally { setBtn('authBtn', false, 'Sign In') }
         }
 
         async function handleSignUp(e) {
             e.preventDefault();
             const email = v('authEmail'), pass = v('authPassword'), name = v('authName');
-            const isAdm = S.isAdminSignup;
-            const code = v('adminCodeInput');
-
-            if (!email || !pass) { toast('Fill in all fields', 'error'); return; }
-            if (pass.length < 6) { toast('Password must be at least 6 characters', 'error'); return; }
-            if (isAdm && code !== CFG.ADMIN_SECRET) { toast('Invalid admin code', 'error'); return; }
-
-            setBtn('authBtn', true, 'Creating…');
+            const isAdm = S.isAdminSignup, isTeach = S.isTeacherSignup;
+            const adminCode = v('adminCodeInput'), teachCode = v('teacherCodeInput');
+            if (!email || !pass) { toast('Please fill in all fields', 'error'); return }
+            if (pass.length < 6) { toast('Password must be at least 6 characters', 'error'); return }
+            if (isAdm && adminCode !== CFG.ADMIN_SECRET) { toast('Invalid admin code', 'error'); return }
+            if (isTeach && teachCode !== CFG.TEACHER_SECRET) { toast('Invalid teacher code', 'error'); return }
+            if (isAdm && isTeach) { toast('Cannot be both admin and teacher', 'error'); return }
+            setBtn('authBtn', true, 'Creating account…');
             try {
-                const { data, error } = await sb.auth.signUp({
-                    email, password: pass,
-                    options: { data: { display_name: name || email.split('@')[0] } }
-                });
+                const { data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { display_name: name || email.split('@')[0] } } });
                 if (error) throw error;
-                if (!data.user) { toast('Check your email to confirm your account.', 'info', 7000); return; }
+                if (!data.user) { toast('Check your email to confirm your account.', 'info', 7000); return }
                 await sb.from('users').upsert({
-                    id: data.user.id, email,
-                    display_name: name || email.split('@')[0],
-                    is_admin: isAdm
+                    id: data.user.id, email, display_name: name || email.split('@')[0],
+                    is_admin: isAdm, is_teacher: isTeach
                 }, { onConflict: 'id' });
-                S.user = data.user;
-                await loadProfile();
-                S.page = 'dashboard';
-                await loadMySubjects();
-                await loadMyRequests();
-                startIvals();
-                if (isAdm) toast('Admin account created!', 'success');
-                render();
-            } catch (e) { toast(e.message, 'error'); }
-            finally { setBtn('authBtn', false, 'Create Account'); }
+                S.user = data.user; await loadProfile(); S.page = 'dashboard';
+                await loadMySubjects(); await loadMyRequests(); startIvals();
+                toast(isAdm ? 'Admin account created! Welcome!' : isTeach ? 'Teacher account created! Welcome!' : 'Welcome! Account created.', 'success');
+                render()
+            } catch (e) { toast(e.message, 'error') }
+            finally { setBtn('authBtn', false, 'Create Account') }
         }
 
         async function handleLogout() {
             await sb.auth.signOut();
             Object.assign(S, { user: null, profile: null, page: 'auth', currentSubject: null, mySubjects: [], subjects: [], modal: null, myRequests: [] });
-            clearIvals(); render();
+            clearIvals(); render()
         }
 
-        /* ═══════════════ PROFILE ═══════════════ */
+        // ─── PROFILE ───
         async function loadProfile() {
             if (!S.user) return;
             const { data, error } = await sb.from('users').select('*').eq('id', S.user.id).single();
-            if (!error && data) S.profile = data;
+            if (!error && data) S.profile = data
         }
-
         async function saveProfile() {
             const name = v('profileName'), bio = v('profileBio');
             try {
                 const { error } = await sb.from('users').update({ display_name: name, bio }).eq('id', S.user.id);
                 if (error) throw error;
-                await loadProfile(); S.modal = null;
-                toast('Profile saved!', 'success'); render();
-            } catch (e) { toast(e.message, 'error'); }
+                await loadProfile(); S.modal = null; toast('Profile saved!', 'success'); render()
+            } catch (e) { toast(e.message, 'error') }
         }
-
         async function uploadAvatar(file) {
             S.uploading = true; render();
             try {
@@ -1708,93 +1789,159 @@
                 const { data: ud } = sb.storage.from('avatars').getPublicUrl(path);
                 const url = ud.publicUrl + '?t=' + Date.now();
                 await sb.from('users').update({ avatar_url: url }).eq('id', S.user.id);
-                await loadProfile();
-                toast('Photo updated!', 'success');
-            } catch (e) { toast('Upload failed: ' + e.message, 'error'); }
-            finally { S.uploading = false; render(); }
+                await loadProfile(); toast('Photo updated!', 'success')
+            } catch (e) { toast('Upload failed: ' + e.message, 'error') }
+            finally { S.uploading = false; render() }
         }
 
-        /* ═══════════════ SUBJECTS ═══════════════ */
+        // ─── SUBJECTS ───
         async function loadSubjects() {
-            let q = sb.from('subjects').select('*');
-            if (S.searchTerm.trim()) q = q.or(`name.ilike.%${S.searchTerm}%,code.ilike.%${S.searchTerm}%`);
-            const { data } = await q.order('created_at', { ascending: false });
-            S.subjects = data || [];
+    try {
+        let query = sb
+            .from('subjects')
+            .select(`
+                *,
+                teacher:users!subjects_teacher_id_fkey (
+                    id,
+                    display_name,
+                    email,
+                    avatar_url
+                ),
+                creator:users!subjects_created_by_fkey (
+                    id,
+                    display_name,
+                    email
+                )
+            `);
+
+        if (S.searchTerm?.trim()) {
+            query = query.or(
+                `name.ilike.%${S.searchTerm}%,code.ilike.%${S.searchTerm}%,subj_code.ilike.%${S.searchTerm}%`
+            );
         }
 
-        async function loadMySubjects() {
-            const { data } = await sb.from('user_subjects')
-                .select('subject_id, subjects(*)').eq('user_id', S.user.id);
-            S.mySubjects = (data || []).map(r => r.subjects).filter(Boolean);
-            await loadSubjects();
+        const { data, error } = await query.order(
+            'created_at',
+            { ascending: false }
+        );
+
+        if (error) throw error;
+
+        let subjects = data || [];
+
+        if (S.activeCategory && S.activeCategory !== 'ALL') {
+            subjects = subjects.filter(
+                s => s.category === S.activeCategory
+            );
         }
+
+        S.subjects = subjects;
+
+    } catch (e) {
+        console.error(e);
+        S.subjects = [];
+        toast(e.message, 'error');
+    }
+
+    render();
+}
+
+       async function loadMySubjects() {
+    try {
+        const { data, error } = await sb
+            .from('user_subjects')
+            .select(`
+                *,
+                subjects (
+                    *
+                )
+            `)
+            .eq('user_id', S.user.id);
+
+        if (error) throw error;
+
+        S.mySubjects = (data || [])
+            .map(r => r.subjects)
+            .filter(Boolean);
+
+        await loadSubjects();
+
+    } catch (e) {
+        console.error(e);
+        S.mySubjects = [];
+    }
+}
 
         async function joinSubject(id) {
             try {
                 const { error } = await sb.from('user_subjects').insert({ user_id: S.user.id, subject_id: id });
-                if (error) throw error;
-                await loadMySubjects(); toast('Joined!', 'success'); render();
-            } catch (e) { toast(e.message, 'error'); }
+                if (error && error.code !== '23505') throw error;
+                await loadMySubjects(); toast('Joined successfully!', 'success'); render()
+            } catch (e) { toast(e.message, 'error') }
         }
 
         async function leaveSubject() {
             try {
                 await sb.from('user_subjects').delete().eq('user_id', S.user.id).eq('subject_id', S.currentSubject.id);
-                S.currentSubject = null; S.page = 'dashboard';
-                await loadMySubjects(); render();
-            } catch (e) { toast(e.message, 'error'); }
+                S.currentSubject = null; S.page = 'dashboard'; await loadMySubjects(); render()
+            } catch (e) { toast(e.message, 'error') }
         }
 
         async function createSubject() {
             const name = v('newSubjName'), code = v('newSubjCode').toUpperCase(), desc = v('newSubjDesc');
-            if (!name || !code) { toast('Name and code are required', 'error'); return; }
+            const cat = v('newSubjCategory') || S.newSubjCat;
+            const subcat = v('newSubjSubcategory');
+            if (!name || !code || !cat) { toast('Name, code, and category are required', 'error'); return }
+            setBtn('createSubjBtn', true, 'Creating…');
             try {
-                const { data, error } = await sb.from('subjects')
-                    .insert({ name, code, description: desc, created_by: S.user.id }).select().single();
+                const { data, error } = await sb.from('subjects').insert({
+                    name, code, description: desc, created_by: S.user.id,
+                    category: cat, subcategory: subcat || null
+                }).select().single();
                 if (error) throw error;
+                // Auto-join the creator
                 await sb.from('user_subjects').insert({ user_id: S.user.id, subject_id: data.id });
                 await loadMySubjects();
                 if (S.page === 'admin') await loadAdminData();
-                S.modal = null; toast('Subject created!', 'success'); render();
-            } catch (e) { toast(e.message, 'error'); }
+                S.modal = null; toast('Subject created!', 'success'); render()
+            } catch (e) { toast(e.code === '23505' ? 'A subject with this code already exists' : e.message, 'error') }
+            finally { setBtn('createSubjBtn', false, 'Create Subject') }
         }
 
         async function updateSubject() {
             const name = v('editSubjName'), code = v('editSubjCode').toUpperCase(), desc = v('editSubjDesc');
-            if (!name || !code) { toast('Name and code are required', 'error'); return; }
+            const cat = v('editSubjCategory'), subcat = v('editSubjSubcategory');
+            if (!name || !code || !cat) { toast('Name, code, and category are required', 'error'); return }
             try {
-                const { error } = await sb.from('subjects')
-                    .update({ name, code, description: desc }).eq('id', S.editSubjectData.id);
+                const { error } = await sb.from('subjects').update({ name, code, description: desc, category: cat, subcategory: subcat || null }).eq('id', S.editSubjectData.id);
                 if (error) throw error;
                 await loadMySubjects(); await loadAdminData();
-                S.modal = null; toast('Subject updated!', 'success'); render();
-            } catch (e) { toast(e.message, 'error'); }
+                S.modal = null; toast('Subject updated!', 'success'); render()
+            } catch (e) { toast(e.message, 'error') }
         }
 
         async function deleteSubject(id) {
             try {
                 await sb.from('messages').delete().eq('subject_id', id);
                 await sb.from('user_subjects').delete().eq('subject_id', id);
-                // delete join requests too
-                try { await sb.from('join_requests').delete().eq('subject_id', id); } catch (e) { }
+                try { await sb.from('join_requests').delete().eq('subject_id', id) } catch (e) { }
                 await sb.from('subjects').delete().eq('id', id);
-                await loadMySubjects(); await loadAdminData();
-                S.modal = null; toast('Subject deleted.', 'success'); render();
-            } catch (e) { toast(e.message, 'error'); }
+                if (S.currentSubject?.id === id) { S.currentSubject = null; S.page = 'dashboard' }
+                await loadMySubjects();
+                try { await loadAdminData() } catch (e) { }
+                S.modal = null; toast('Subject deleted.', 'success'); render()
+            } catch (e) { toast(e.message, 'error') }
         }
 
-        /* ═══════════════ JOIN REQUESTS ═══════════════ */
+        // ─── JOIN REQUESTS ───
         async function loadMyRequests() {
             if (!S.user) return;
-            try {
-                const { data } = await sb.from('join_requests')
-                    .select('*, subjects(name, code)').eq('user_id', S.user.id);
-                S.myRequests = data || [];
-            } catch (e) { S.myRequests = []; }
+            try { const { data } = await sb.from('join_requests').select('*, subjects(name,code)').eq('user_id', S.user.id); S.myRequests = data || [] }
+            catch (e) { S.myRequests = [] }
         }
 
         async function submitJoinRequest(subjectId) {
-            if (!S.scheduleFile) { toast('Please attach your schedule file', 'error'); return; }
+            if (!S.scheduleFile) { toast('Please attach your schedule file', 'error'); return }
             S.uploading = true; render();
             try {
                 const ext = S.scheduleFile.name.split('.').pop();
@@ -1804,221 +1951,347 @@
                 const { data: ud } = sb.storage.from('subject-join-verifications').getPublicUrl(path);
                 const { error } = await sb.from('join_requests').upsert({
                     user_id: S.user.id, subject_id: subjectId,
-                    schedule_url: ud.publicUrl,
-                    schedule_name: S.scheduleFile.name,
-                    status: 'pending'
+                    schedule_url: ud.publicUrl, schedule_name: S.scheduleFile.name, status: 'pending'
                 }, { onConflict: 'user_id,subject_id' });
                 if (error) throw error;
-                await loadMyRequests();
-                S.scheduleFile = null; S.modal = null;
-                toast('Request submitted! Admin will review your schedule.', 'success');
-            } catch (e) { toast('Failed: ' + e.message, 'error'); }
-            finally { S.uploading = false; render(); }
+                await loadMyRequests(); S.scheduleFile = null; S.modal = null;
+                toast('Request submitted! An admin will review your schedule.', 'success')
+            } catch (e) { toast('Failed: ' + e.message, 'error') }
+            finally { S.uploading = false; render() }
         }
+  async function loadAdminRequests() {
+    try {
+        const { data, error } = await sb
+            .from('join_requests')
+            .select(`
+                *,
+                user:users!join_requests_user_id_fkey(
+                    id,
+                    display_name,
+                    email,
+                    avatar_url
+                ),
+                subject:subjects!join_requests_subject_id_fkey(
+                    id,
+                    name,
+                    code,
+                    subj_code,
+                    section,
+                    type,
+                    days,
+                    time_start,
+                    time_end,
+                    room
+                )
+            `)
+            .order('created_at', { ascending: false });
 
-        async function loadAdminRequests() {
-            try {
-                const { data } = await sb.from('join_requests')
-                    .select('*, users(id, email, display_name, avatar_url), subjects(id, name, code)')
-                    .eq('status', 'pending').order('created_at', { ascending: false });
-                S.adminRequests = data || [];
-            } catch (e) { S.adminRequests = []; }
-        }
+        if (error) throw error;
 
+        S.adminRequests = data || [];
+    } catch (e) {
+        console.error(e);
+        S.adminRequests = [];
+    }
+}
+        // ─── ADMIN ───
+      async function loadAdminData() {
+    if (!isAdmin()) {
+        toast('Access denied', 'error');
+        return;
+    }
+
+    try {
+        const [
+            subjRes,
+            userRes,
+            msgRes,
+            pendingRes,
+            requestRes
+        ] = await Promise.all([
+            sb.from('subjects')
+                .select(`
+                    *,
+                    teacher:users!subjects_teacher_id_fkey(
+                        id,
+                        display_name,
+                        email
+                    )
+                `)
+                .order('created_at', { ascending: false }),
+
+            sb.from('users')
+                .select('*')
+                .order('created_at', { ascending: false }),
+
+            sb.from('messages')
+                .select('id', {
+                    count: 'exact',
+                    head: true
+                }),
+
+            sb.from('join_requests')
+                .select('id', {
+                    count: 'exact',
+                    head: true
+                })
+                .eq('status', 'pending'),
+
+            sb.from('join_requests')
+                .select('id', {
+                    count: 'exact',
+                    head: true
+                })
+        ]);
+
+        S.adminSubjects = subjRes.data || [];
+        S.adminUsers = userRes.data || [];
+
+        S.adminStats = {
+            subjects: S.adminSubjects.length,
+            users: S.adminUsers.length,
+            messages: msgRes.count || 0,
+            pending: pendingRes.count || 0,
+            requests: requestRes.count || 0
+        };
+
+        await loadAdminRequests();
+
+    } catch (e) {
+        console.error(e);
+        toast(e.message, 'error');
+    }
+}
+
+    async function loadAdminData() {
+    if (!isAdmin()) {
+        toast('Access denied', 'error');
+        return;
+    }
+
+    const [subjRes, userRes, msgRes, reqRes, allReqRes] = await Promise.all([
+        sb
+            .from('subjects')
+            .select('*')
+            .order('created_at', { ascending: false }),
+
+        sb
+            .from('users')
+            .select('*')
+            .order('created_at', { ascending: false }),
+
+        sb
+            .from('messages')
+            .select('id', { count: 'exact', head: true }),
+
+        sb
+            .from('join_requests')
+            .select('id', { count: 'exact', head: true })
+            .eq('status', 'pending'),
+
+        sb
+            .from('join_requests')
+            .select('id', { count: 'exact', head: true })
+    ]);
+
+    console.log('SUBJECTS', subjRes);
+    console.log('USERS', userRes);
+
+    S.adminSubjects = subjRes.data || [];
+    S.adminUsers = userRes.data || [];
+
+    S.adminStats = {
+        subjects: S.adminSubjects.length,
+        users: S.adminUsers.length,
+        messages: msgRes.count || 0,
+        pending: reqRes.count || 0,
+        requests: allReqRes.count || 0
+    };
+
+    await loadAdminRequests();
+}
         async function approveRequest(req) {
             try {
                 await sb.from('join_requests').update({ status: 'approved' }).eq('id', req.id);
                 await sb.from('user_subjects').upsert({ user_id: req.user_id, subject_id: req.subject_id }, { onConflict: 'user_id,subject_id' });
-                await loadAdminData();
-                toast('Request approved — user has joined the group!', 'success'); render();
-            } catch (e) { toast(e.message, 'error'); }
+                await loadAdminData(); toast('Approved — user has joined the group!', 'success'); render()
+            } catch (e) { toast(e.message, 'error') }
         }
 
         async function rejectRequest(id) {
             try {
                 await sb.from('join_requests').update({ status: 'rejected' }).eq('id', id);
-                await loadAdminData();
-                toast('Request rejected.', 'info'); render();
-            } catch (e) { toast(e.message, 'error'); }
+                await loadAdminData(); toast('Request rejected.', 'info'); render()
+            } catch (e) { toast(e.message, 'error') }
         }
 
-        /* ═══════════════ ADMIN DATA ═══════════════ */
-        async function loadAdminData() {
-            if (!isAdmin()) { toast('Access denied', 'error'); return; }
-            const [subjRes, userRes, msgRes, reqRes] = await Promise.all([
-                sb.from('subjects').select('*, users(display_name, email)').order('created_at', { ascending: false }),
-                sb.from('users').select('*').order('created_at', { ascending: false }),
-                sb.from('messages').select('id', { count: 'exact', head: true }),
-                sb.from('join_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending')
-            ]);
-            S.adminSubjects = subjRes.data || [];
-            S.adminUsers = userRes.data || [];
-            S.adminStats = {
-                subjects: (subjRes.data || []).length,
-                users: (userRes.data || []).length,
-                messages: msgRes.count || 0,
-                pending: reqRes.count || 0
-            };
-            await loadAdminRequests();
-        }
-
-        async function toggleAdminRole(userId, currentIsAdmin) {
-            if (!isAdmin()) { toast('Access denied', 'error'); return; }
+        async function toggleAdminRole(userId, cur) {
+            if (!isAdmin()) { toast('Access denied', 'error'); return }
             try {
-                const { error } = await sb.from('users').update({ is_admin: !currentIsAdmin }).eq('id', userId);
-                if (error) throw error;
-                await loadAdminData();
-                toast(currentIsAdmin ? 'Admin removed.' : 'Admin granted.', 'success'); render();
-            } catch (e) { toast(e.message, 'error'); }
+                await sb.from('users').update({ is_admin: !cur }).eq('id', userId);
+                await loadAdminData(); toast(cur ? 'Admin role removed.' : 'Admin role granted.', 'success'); render()
+            } catch (e) { toast(e.message, 'error') }
+        }
+
+        async function toggleTeacherRole(userId, cur) {
+            if (!isAdmin()) { toast('Access denied', 'error'); return }
+            try {
+                await sb.from('users').update({ is_teacher: !cur }).eq('id', userId);
+                await loadAdminData(); toast(cur ? 'Teacher role removed.' : 'Teacher role granted.', 'success'); render()
+            } catch (e) { toast(e.message, 'error') }
         }
 
         async function deleteUser(userId) {
-            if (!isAdmin()) { toast('Access denied', 'error'); return; }
-            if (userId === S.user.id) { toast('Cannot delete your own account', 'error'); return; }
+            if (!isAdmin()) { toast('Access denied', 'error'); return }
+            if (userId === S.user.id) { toast('Cannot delete your own account', 'error'); return }
             try {
                 await sb.from('messages').delete().eq('user_id', userId);
                 await sb.from('user_subjects').delete().eq('user_id', userId);
-                try { await sb.from('join_requests').delete().eq('user_id', userId); } catch (e) { }
+                try { await sb.from('join_requests').delete().eq('user_id', userId) } catch (e) { }
                 await sb.from('users').delete().eq('id', userId);
-                await loadAdminData(); S.modal = null;
-                toast('User removed.', 'success'); render();
-            } catch (e) { toast(e.message, 'error'); }
+                await loadAdminData(); S.modal = null; toast('User removed.', 'success'); render()
+            } catch (e) { toast(e.message, 'error') }
         }
 
         async function adminDeleteMsg(id) {
-            if (!isAdmin()) { toast('Access denied', 'error'); return; }
-            try {
-                await sb.from('messages').delete().eq('id', id);
-                await loadMessages();
-            } catch (e) { toast(e.message, 'error'); }
+            if (!isAdmin()) { toast('Access denied', 'error'); return }
+            try { await sb.from('messages').delete().eq('id', id); await loadMessages() }
+            catch (e) { toast(e.message, 'error') }
         }
 
         function goAdmin() {
-            if (!isAdmin()) { toast('Admin access required', 'error'); return; }
-            S.page = 'admin'; S.adminTab = 'overview';
-            loadAdminData().then(render);
+            if (!isAdmin()) { toast('Admin access required', 'error'); return }
+            S.page = 'admin'; S.adminTab = 'overview'; loadAdminData().then(render)
         }
 
-        /* ═══════════════ MESSAGES ═══════════════ */
-        async function loadMessages(silent = false) {
-            if (!S.currentSubject) return;
-            const { data, error } = await sb.from('messages')
-                .select('*, users(id, email, display_name, avatar_url)')
-                .eq('subject_id', S.currentSubject.id).order('created_at', { ascending: true });
-            if (error) { console.error('loadMessages:', error); return; }
-            const prev = S.messages.length;
-            S.messages = data || [];
-            if (!silent || S.messages.length !== prev) { updateMessagesDOM(); scrollBottom(); }
-        }
+        // ─── CHAT ───
+    async function loadMessages() {
+    if (!S.currentSubject) return;
+
+    try {
+        const { data, error } = await sb
+            .from('messages')
+            .select(`
+                *,
+                user:users!messages_user_id_fkey (
+                    id,
+                    display_name,
+                    avatar_url,
+                    role
+                )
+            `)
+            .eq('subject_id', S.currentSubject.id)
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        S.messages = data || [];
+
+    } catch (e) {
+        console.error(e);
+        S.messages = [];
+    }
+
+    render();
+}
 
         async function loadMembers() {
             if (!S.currentSubject) return;
-            const { data } = await sb.from('user_subjects')
-                .select('user_id, users(id, email, display_name, avatar_url)').eq('subject_id', S.currentSubject.id);
-            S.members = (data || []).map(r => r.users).filter(Boolean);
+            const { data } = await sb.from('user_subjects').select('user_id, users(id,email,display_name,avatar_url)').eq('subject_id', S.currentSubject.id);
+            S.members = (data || []).map(r => r.users).filter(Boolean)
         }
 
-        async function sendMessage() {
-            const ta = document.getElementById('msgInput');
-            const text = (ta?.value || '').trim();
-            if (!text && S.pendingFiles.length === 0) return;
-            const files = [...S.pendingFiles];
-            S.pendingFiles = [];
-            if (ta) ta.value = '';
-            if (files.length > 0) { S.uploading = true; render(); }
-            try {
-                for (const file of files) {
-                    const aType = attachType(file);
-                    const ext = file.name.split('.').pop();
-                    const path = `${S.currentSubject.id}/${Date.now()}_${rnd()}.${ext}`;
-                    const { error: upErr } = await sb.storage.from('chat-attachments').upload(path, file, { contentType: file.type });
-                    if (upErr) throw upErr;
-                    const { data: ud } = sb.storage.from('chat-attachments').getPublicUrl(path);
-                    await sb.from('messages').insert({
-                        subject_id: S.currentSubject.id, user_id: S.user.id,
-                        message: null, attachment_url: ud.publicUrl,
-                        attachment_name: file.name, attachment_type: aType, attachment_size: file.size
-                    });
-                }
-                if (text) {
-                    const { error } = await sb.from('messages').insert({
-                        subject_id: S.currentSubject.id, user_id: S.user.id, message: text
-                    });
-                    if (error) throw error;
-                }
-                await loadMessages();
-            } catch (e) { toast('Send failed: ' + e.message, 'error'); }
-            finally { S.uploading = false; render(); }
+     async function sendMessage() {
+    const text = v('msgInput')?.trim();
+
+    if (!text && S.pendingFiles.length === 0) return;
+
+    try {
+        let attachment = null;
+
+        // Upload first selected file to Supabase Storage
+        if (S.pendingFiles.length > 0) {
+            const file = S.pendingFiles[0];
+
+            const ext = file.name.split('.').pop();
+            const path = `messages/${S.currentSubject.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+            const { error: uploadError } = await sb.storage
+                .from('chat-attachments')
+                .upload(path, file, {
+                    upsert: false,
+                    contentType: file.type
+                });
+
+            if (uploadError) throw uploadError;
+
+            const { data } = sb.storage
+                .from('chat-attachments')
+                .getPublicUrl(path);
+
+            attachment = {
+                url: data.publicUrl,
+                name: file.name,
+                type: attachType(file),
+                size: file.size
+            };
         }
 
+        const payload = {
+            subject_id: S.currentSubject.id,
+            user_id: S.user.id,
+            message: text || null,
+            attachment_url: attachment?.url || null,
+            attachment_name: attachment?.name || null,
+            attachment_type: attachment?.type || null,
+            attachment_size: attachment?.size || null
+        };
+
+        const { error } = await sb
+            .from('messages')
+            .insert(payload);
+
+        if (error) throw error;
+
+        S.pendingFiles = [];
+
+        const input = document.getElementById('msgInput');
+        if (input) input.value = '';
+
+        await loadMessages();
+        render();
+        scrollBottom();
+
+    } catch (e) {
+        console.error(e);
+        toast('Failed to send attachment: ' + e.message, 'error');
+    }
+}
         async function deleteMessage(id) {
-            try {
-                const { error } = await sb.from('messages').delete().eq('id', id).eq('user_id', S.user.id);
-                if (error) throw error;
-                await loadMessages();
-            } catch (e) { toast(e.message, 'error'); }
+            try { const { error } = await sb.from('messages').delete().eq('id', id).eq('user_id', S.user.id); if (error) throw error; await loadMessages() }
+            catch (e) { toast(e.message, 'error') }
         }
 
-        /* ═══════════════ NAVIGATION ═══════════════ */
         async function goToChat(subj) {
-            S.currentSubject = subj; S.page = 'chat';
-            S.messages = []; S.members = []; S.pendingFiles = []; S.showMembers = false;
-            render();
-            await Promise.all([loadMessages(), loadMembers()]);
-            render(); scrollBottom();
+            S.currentSubject = subj; S.page = 'chat'; S.messages = []; S.members = []; S.pendingFiles = []; S.showMembers = false;
+            render(); await Promise.all([loadMessages(), loadMembers()]); render(); scrollBottom()
         }
 
-        function goToDashboard() { S.page = 'dashboard'; S.currentSubject = null; render(); }
+        function goToDashboard() { S.page = 'dashboard'; S.currentSubject = null; render() }
 
-        function confirmDelete(type, id, label) {
-            S.modal = 'confirmDelete'; S.deleteTarget = { type, id, label }; render();
-        }
+        function confirmDelete(type, id, label) { S.modal = 'confirmDelete'; S.deleteTarget = { type, id, label }; render() }
 
         async function executeDelete() {
             const t = S.deleteTarget; if (!t) return;
             if (t.type === 'subject') await deleteSubject(t.id);
             else if (t.type === 'user') await deleteUser(t.id);
-            S.deleteTarget = null;
+            S.deleteTarget = null
         }
 
-        /* ═══════════════ REQUEST MODAL ═══════════════ */
-        function openRequestModal(subj) {
-            S.modal = 'joinRequest';
-            S.editSubjectData = subj; // reuse to store target subject
-            S.scheduleFile = null;
-            render();
-        }
+        function openRequestModal(subj) { S.modal = 'joinRequest'; S.editSubjectData = subj; S.scheduleFile = null; render() }
+        function openEditSubject(s) { S.editSubjectData = s; S.modal = 'editSubject'; render() }
 
-        /* ═══════════════ UTILS ═══════════════ */
-        function v(id) { return (document.getElementById(id)?.value || '').trim(); }
-        function rnd() { return Math.random().toString(36).slice(2, 9); }
-        function setBtn(id, dis, label) { const b = document.getElementById(id); if (b) { b.disabled = dis; b.textContent = label; } }
-        function attachType(f) { return f.type.startsWith('image/') ? 'image' : f.type.startsWith('video/') ? 'video' : 'file'; }
-        function fmtSize(b) { if (!b) return ''; if (b < 1024) return b + 'B'; if (b < 1048576) return (b / 1024).toFixed(1) + 'KB'; return (b / 1048576).toFixed(1) + 'MB'; }
-        function tstr(ts) { return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
-        function dateStr(ts) { return new Date(ts).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }); }
-        function esc(s) { if (!s) return ''; return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c])); }
-        const BG_COLORS = ['#6c63ff', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
-        function avColor(str) { let h = 0; for (let i = 0; i < (str || '').length; i++) h = (h * 31 + str.charCodeAt(i)) & 0xffffffff; return BG_COLORS[Math.abs(h) % BG_COLORS.length]; }
-        function avHTML(user, cls = 'av av-sm') {
-            const name = user?.display_name || user?.email || '?';
-            const init = name.charAt(0).toUpperCase();
-            if (user?.avatar_url) return `<div class="${cls}"><img src="${esc(user.avatar_url)}" alt="${esc(name)}"></div>`;
-            return `<div class="${cls}" style="background:${avColor(name)}">${init}</div>`;
-        }
-        function fileIcon(name) {
-            const ext = (name || '').split('.').pop().toLowerCase();
-            return { pdf: '📄', doc: '📝', docx: '📝', xls: '📊', xlsx: '📊', ppt: '📊', pptx: '📊', zip: '🗜️', rar: '🗜️', txt: '📃' }[ext] || '📎';
-        }
-        function scrollBottom() { setTimeout(() => { const c = document.querySelector('.msgs-scroll'); if (c) c.scrollTop = c.scrollHeight; }, 60); }
-        function isAdmin() { return !!S.profile?.is_admin; }
-        function openLightbox(src, type) { S.modal = 'lightbox'; S.lightboxSrc = src; S.lightboxType = type; render(); }
-        function removePendingFile(i) { S.pendingFiles.splice(i, 1); render(); }
-        function safeJson(obj) { return JSON.stringify(obj).replace(/'/g, "&#39;").replace(/"/g, '&quot;'); }
-        function myRequestForSubject(sid) { return S.myRequests.find(r => r.subject_id === sid); }
-        function isMember(sid) { return S.mySubjects.some(s => s.id === sid); }
-
-        /* ═══════════════ RENDER ROUTER ═══════════════ */
+        // ─── RENDER ───
         function render() {
             const root = document.getElementById('app');
             let html = '';
@@ -2042,427 +2315,539 @@
 
         function updateMessagesDOM() {
             const c = document.querySelector('.msgs-scroll');
-            if (c) { c.innerHTML = renderMessages(); scrollBottom(); }
+            if (c) { c.innerHTML = renderMessages(); scrollBottom() }
         }
-
         function updateDashGrid() {
             const g = document.querySelector('.subjects-grid');
-            if (g) g.innerHTML = allSubjectsHTML();
+            if (g) g.innerHTML = allSubjectsHTML()
         }
 
-        /* ═══════════════ AUTH RENDER ═══════════════ */
+        // ─── AUTH RENDER ───
         function renderAuth() {
             const isLogin = S.authMode === 'login';
-            return `
-    <div class="auth-page page">
-        <div class="auth-box fade-up">
-        <div class="auth-logo">
-            <div class="icon">💬</div>
-            <h1>ChatGroups</h1>
-            <p>Study together, learn together</p>
-        </div>
-        <div class="auth-tabs">
-            <button class="auth-tab ${isLogin ? 'active' : ''}" onclick="S.authMode='login';S.isAdminSignup=false;render()">Sign In</button>
-            <button class="auth-tab ${!isLogin ? 'active' : ''}" onclick="S.authMode='signup';render()">Sign Up</button>
-        </div>
-        <form class="auth-form" onsubmit="${isLogin ? 'handleLogin' : 'handleSignUp'}(event)">
-            ${!isLogin ? `
-            <div class="form-field"><label>Display Name</label><input id="authName" type="text" placeholder="Your name"></div>
-            ` : ''}
-            <div class="form-field"><label>Email</label><input id="authEmail" type="email" placeholder="you@example.com" required></div>
-            <div class="form-field"><label>Password</label><input id="authPassword" type="password" placeholder="Min. 6 characters" required minlength="6"></div>
-            ${!isLogin ? `
-            <div class="admin-toggle-row" onclick="S.isAdminSignup=!S.isAdminSignup;render()">
-                <input type="checkbox" id="isAdminCheck" ${S.isAdminSignup ? 'checked' : ''} onchange="S.isAdminSignup=this.checked;render()">
-                <label for="isAdminCheck">⚙ Register as Administrator</label>
-            </div>
-            ${S.isAdminSignup ? `
-                <div class="form-field">
-                <label>Admin Secret Code</label>
-                <input id="adminCodeInput" type="password" placeholder="Enter admin code" autocomplete="off">
-                <span style="font-size:12px;color:var(--txt3);">Contact your system administrator for the code.</span>
-                </div>
-            ` : ''}
-            ` : ''}
-            <button id="authBtn" type="submit" class="btn btn-primary" style="width:100%;padding:12px;margin-top:4px;">
-            ${isLogin ? 'Sign In' : 'Create Account'}
-            </button>
-        </form>
-        </div>
-    </div>`;
+            return `<div class="auth-page page">
+  <div class="auth-box">
+    <div class="auth-logo">
+     <div class="auth-icon">
+    <img src="logo.png" alt="Logo" class="auth-logo">
+</div>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab ${isLogin ? 'active' : ''}" onclick="S.authMode='login';S.isAdminSignup=false;S.isTeacherSignup=false;render()">Sign In</button>
+      <button class="auth-tab ${!isLogin ? 'active' : ''}" onclick="S.authMode='signup';render()">Create Account</button>
+    </div>
+    <form class="auth-form" onsubmit="${isLogin ? 'handleLogin' : 'handleSignUp'}(event)">
+      ${!isLogin ? `<div class="form-field"><label>Display Name</label><input id="authName" type="text" placeholder="Your full name"></div>` : ''}
+      <div class="form-field"><label>Email</label><input id="authEmail" type="email" placeholder="you@example.com" required></div>
+      <div class="form-field"><label>Password</label><input id="authPassword" type="password" placeholder="Minimum 6 characters" required minlength="6"></div>
+      ${!isLogin ? `
+      ${S.isAdminSignup ? `<div class="form-field"><label>Admin Secret Code</label><input id="adminCodeInput" type="password" placeholder="Enter admin code" autocomplete="off"></div>` : ''}
+      ${S.isTeacherSignup ? `<div class="form-field"><label>Teacher Secret Code</label><input id="teacherCodeInput" type="password" placeholder="Enter teacher code" autocomplete="off"></div>` : ''}
+      `: ''}
+      <button id="authBtn" type="submit" class="btn btn-primary" style="width:100%;padding:12px;margin-top:4px;justify-content:center;font-size:14px">
+        ${isLogin ? 'Sign In' : 'Create Account'}
+      </button>
+    </form>
+  </div>
+</div>`
         }
 
-        /* ═══════════════ TOPNAV ═══════════════ */
+        // ─── TOPNAV ───
         function renderTopNav() {
             const name = S.profile?.display_name || S.user?.email || '';
-            const admin = isAdmin();
             const pendingCount = S.adminStats.pending || 0;
-            return `
-    <nav class="topnav">
-        <div class="topnav-brand">
-        <div class="dot">💬</div>
-        ChatGroups
-        ${admin ? '<span class="admin-badge">ADMIN</span>' : ''}
-        </div>
-        <div class="topnav-actions">
-        ${S.page === 'dashboard' && admin ? `
-            <button class="btn btn-warn btn-sm" onclick="goAdmin()" style="display:flex;align-items:center;gap:6px">
-            ⚙ Admin Panel
-            ${pendingCount > 0 ? `<span style="background:#ef4444;color:#fff;border-radius:99px;padding:1px 6px;font-size:11px">${pendingCount}</span>` : ''}
-            </button>
-        ` : ''}
-        ${S.page === 'admin' ? `<button class="btn btn-ghost btn-sm" onclick="goToDashboard()">← Dashboard</button>` : ''}
-        <button class="avatar-btn" onclick="S.modal='profile';render()" title="Profile settings">
-            ${S.profile?.avatar_url ? `<img src="${esc(S.profile.avatar_url)}" alt="">` : `<span>${esc(name.charAt(0).toUpperCase())}</span>`}
-        </button>
-        <button class="btn btn-danger btn-sm" onclick="handleLogout()">Sign out</button>
-        </div>
-    </nav>`;
+            return `<nav class="topnav">
+  <div class="topnav-brand">
+  <div class="auth-icon">
+    <img src="logo.png" alt="Logo" class="auth-logo">
+</div>
+    SubjectFinder
+    ${isAdmin() ? '<span class="role-chip chip-admin">ADMIN</span>' : ''}
+    ${isTeacher() ? '<span class="role-chip chip-teacher">TEACHER</span>' : ''}
+  </div>
+  <div class="topnav-actions">
+    ${S.page === 'dashboard' && isAdmin() ? `
+      <button class="btn btn-warn btn-sm" onclick="goAdmin()">
+        ⚙️ Admin${pendingCount > 0 ? ` <span style="background:#ef4444;color:#fff;border-radius:99px;padding:1px 7px;font-size:10px">${pendingCount}</span>` : ''}
+      </button>`: ''}
+    ${S.page === 'admin' ? `<button class="btn btn-ghost btn-sm" onclick="goToDashboard()">← Back</button>` : ''}
+    <button class="avatar-btn" onclick="S.modal='profile';render()" title="Profile">
+      ${S.profile?.avatar_url ? `<img src="${esc(S.profile.avatar_url)}" alt="">` : `<span>${esc(name.charAt(0).toUpperCase())}</span>`}
+    </button>
+    <button class="btn btn-danger btn-sm" onclick="handleLogout()">Sign Out</button>
+  </div>
+</nav>`
         }
 
-        /* ═══════════════ DASHBOARD ═══════════════ */
+        // ─── DASHBOARD ───
         function allSubjectsHTML() {
             if (S.subjects.length === 0) {
-                return `<div class="empty-state"><div class="empty-state-icon">${S.searchTerm ? '🔍' : '📚'}</div><p>${S.searchTerm ? 'No subjects match your search' : 'No subjects available yet.'}</p></div>`;
+                return `<div class="empty-state">
+      <span class="empty-icon">${S.searchTerm ? '🔍' : '📚'}</span>
+      <div class="empty-title">${S.searchTerm ? 'No subjects found' : 'No subjects yet'}</div>
+      <div class="empty-sub">${S.searchTerm ? 'Try a different search term' : 'Subjects will appear here once created'}</div>
+    </div>`
             }
-            return S.subjects.map(s => {
+            return S.subjects.map((s, i) => {
                 const joined = isMember(s.id);
                 const req = myRequestForSubject(s.id);
+                const cat = CATEGORIES[s.category] || CATEGORIES.OTHER;
                 let actionHTML = '';
                 if (joined) {
-                    actionHTML = `<button class="chat-entry-btn" onclick="goToChat(${safeJson(s)})">💬 Open Chat</button>`;
+                    actionHTML = `<button class="btn btn-primary btn-sm" onclick="goToChat(${safeJson(s)})">💬 Open Chat</button>`;
                 } else if (req) {
-                    const statusColors = { pending: 'badge-pending', approved: 'badge-approved', rejected: 'badge-rejected' };
-                    const statusEmoji = { pending: '⏳', approved: '✅', rejected: '❌' };
-                    actionHTML = `<span class="badge ${statusColors[req.status]}">${statusEmoji[req.status]} ${req.status.charAt(0).toUpperCase() + req.status.slice(1)}</span>`;
-                    if (req.status === 'rejected') {
-                        actionHTML += `<button class="btn btn-ghost btn-sm" onclick="openRequestModal(${safeJson(s)})">↩ Re-apply</button>`;
-                    }
+                    const statusCls = { pending: 'badge-pending', approved: 'badge-approved', rejected: 'badge-rejected' }[req.status];
+                    const statusIcon = { pending: '⏳', approved: '✅', rejected: '❌' }[req.status];
+                    actionHTML = `<span class="status-badge ${statusCls}">${statusIcon} ${req.status.charAt(0).toUpperCase() + req.status.slice(1)}</span>`;
+                    if (req.status === 'rejected') actionHTML += `<button class="btn btn-ghost btn-sm" onclick="openRequestModal(${safeJson(s)})">↩ Re-apply</button>`;
                 } else {
-                    // Not joined, no request
-                    if (isAdmin()) {
-                        actionHTML = `<button class="btn btn-primary btn-sm" onclick="joinSubject('${esc(s.id)}')">+ Join</button>`;
+                    if (isAdmin() || isTeacher()) {
+                        actionHTML = `<button class="btn btn-success btn-sm" onclick="joinSubject('${esc(s.id)}')">+ Join</button>`;
                     } else {
                         actionHTML = `<button class="btn btn-primary btn-sm" onclick="openRequestModal(${safeJson(s)})">📋 Request to Join</button>`;
                     }
                 }
-                return `
-        <div class="subject-card">
-        <div class="sc-head">
-            <div class="sc-name">${esc(s.name)}</div>
-            <span class="badge">${esc(s.code)}</span>
-        </div>
-        <div class="sc-desc">${esc(s.description || 'No description provided.')}</div>
-        <div class="sc-actions">${actionHTML}</div>
-        </div>`;
-            }).join('');
+                return `<div class="subject-card" style="animation-delay:${i * 0.03}s">
+
+  <div class="sc-top">
+    <div class="sc-name">${esc(s.name)}</div>
+
+    <div class="sc-badges">
+      <span class="sc-code">${esc(s.code || '-')}</span>
+      ${s.category ? `
+        <span class="sc-cat ${catClass(s.category)}">
+          ${cat.icon} ${esc(s.category)}
+        </span>
+      ` : ''}
+    </div>
+  </div>
+
+  <div class="sc-desc">
+    ${esc(s.description || 'No description provided.')}
+  </div>
+
+  <div style="margin-top:10px;font-size:12px;color:var(--txt2);display:grid;gap:4px">
+
+    <div>📖 <b>Subject Code:</b> ${esc(s.subj_code || '-')}</div>
+
+    <div>🏫 <b>Section:</b> ${esc(s.section || '-')}</div>
+
+    <div>📚 <b>Type:</b> ${esc(s.type || '-')}</div>
+
+    <div>📅 <b>Days:</b> ${esc(s.days || '-')}</div>
+
+    <div>🕒 <b>Start:</b> ${esc(s.time_start || '-')}</div>
+
+    <div>🕒 <b>End:</b> ${esc(s.time_end || '-')}</div>
+
+    <div>🚪 <b>Room:</b> ${esc(s.room || '-')}</div>
+
+    <div>👨‍🏫 <b>Teacher:</b>
+      ${esc(s.teacher?.display_name || 'Unassigned')}
+    </div>
+
+  </div>
+
+  <div class="sc-actions">
+    ${actionHTML}
+  </div>
+
+</div>`;
+            }).join('')
+        }
+
+        function renderCategoryFilters() {
+            const cats = ['ALL', 'NSTP', 'GEC', 'PE', 'OTHER'];
+            const subcats = S.activeCategory !== 'ALL' ? (CATEGORIES[S.activeCategory]?.subcats || []) : [];
+            return `<div class="filter-bar">
+    ${cats.map(c => {
+                const label = c === 'ALL' ? 'All Subjects' : CATEGORIES[c]?.label || c;
+                const icon = c === 'ALL' ? '📋' : CATEGORIES[c]?.icon || '';
+                return `<button class="cat-chip ${S.activeCategory === c ? 'active' : ''}" onclick="S.activeCategory='${c}';S.activeSubcategory='ALL';loadSubjects().then(updateDashGrid)">${icon} ${label}</button>`
+            }).join('')}
+    ${subcats.length > 0 ? `
+      <select class="filter-select" onchange="S.activeSubcategory=this.value;loadSubjects().then(updateDashGrid)">
+        <option value="ALL">All ${CATEGORIES[S.activeCategory]?.label}</option>
+        ${subcats.map(sc => `<option value="${sc}" ${S.activeSubcategory === sc ? 'selected' : ''}>${sc}</option>`).join('')}
+      </select>`: ''}
+  </div>`
         }
 
         function renderDashboard() {
-            // Group: my subjects in sidebar, all in main
+            const canCreate = isAdmin() || isTeacher();
             const mySubjectsHTML = S.mySubjects.length === 0
-                ? `<div style="padding:18px 12px;text-align:center;color:var(--txt3);font-size:13px;">Join a subject to start</div>`
+                ? `<div style="padding:16px;text-align:center;color:var(--txt3);font-size:13px">Join a subject to get started</div>`
                 : S.mySubjects.map(s => `
-        <div class="sidebar-item" onclick="goToChat(${safeJson(s)})">
-            <div class="si-icon">📚</div>
-            <div class="si-text">
-            <div class="si-name">${esc(s.name)}</div>
-            <div class="si-sub">${esc(s.code)}</div>
-            </div>
-            <span style="font-size:14px">💬</span>
-        </div>`).join('');
-
-            // Show pending requests in sidebar
-            const pendingReqs = S.myRequests.filter(r => r.status === 'pending');
-            const pendingHTML = pendingReqs.length > 0 ? `
-        <div style="padding:10px 12px 4px;font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:1px">My Requests</div>
-        ${pendingReqs.map(r => `
-        <div class="sidebar-item" style="cursor:default">
-            <div class="si-icon" style="background:rgba(249,115,22,.15)">⏳</div>
-            <div class="si-text">
-            <div class="si-name">${esc(r.subjects?.name || '—')}</div>
-            <div class="si-sub">Awaiting approval</div>
-            </div>
-        </div>`).join('')}
-    ` : '';
-
-            return `
-    <div class="shell page">
-        ${renderTopNav()}
-        <div class="dash-body">
-        <aside class="sidebar">
-            <div class="sidebar-hd">My Subjects (${S.mySubjects.length})</div>
-            <div class="sidebar-list">
-            ${mySubjectsHTML}
-            ${pendingHTML}
-            </div>
-            ${isAdmin() ? `<div class="sidebar-footer"><button class="btn btn-warn btn-sm" style="width:100%" onclick="goAdmin()">⚙ Admin Panel</button></div>` : ''}
-        </aside>
-        <main class="main-panel">
-            <div class="search-bar">
-            <input type="text" placeholder="🔍 Search subjects by name or code…"
-                value="${esc(S.searchTerm)}"
-                oninput="S.searchTerm=this.value;loadSubjects().then(updateDashGrid)">
-            </div>
-            <div class="panel-hd">All Subjects</div>
-            <div class="subjects-grid">${allSubjectsHTML()}</div>
-        </main>
+      <div class="sidebar-item" onclick="goToChat(${safeJson(s)})">
+        <div class="si-icon">${CATEGORIES[s.category]?.icon || '📚'}</div>
+        <div style="flex:1;min-width:0">
+          <div class="si-name">${esc(s.name)}</div>
+          <div class="si-sub">${esc(s.code)}${s.category ? ` · ${s.category}` : ''}</div>
         </div>
-    </div>`;
+      </div>`).join('');
+
+            const pendingReqs = S.myRequests.filter(r => r.status === 'pending');
+            return `<div class="shell page">
+    ${renderTopNav()}
+    <div class="dash-body">
+      <aside class="sidebar">
+        <div class="sidebar-hd">My Subjects (${S.mySubjects.length})</div>
+        <div class="sidebar-list">
+          ${mySubjectsHTML}
+          ${pendingReqs.length > 0 ? `
+            <div style="padding:12px 10px 4px;font-size:10px;font-weight:800;color:var(--txt3);text-transform:uppercase;letter-spacing:1px">Pending (${pendingReqs.length})</div>
+            ${pendingReqs.map(r => `
+              <div class="sidebar-item" style="cursor:default">
+                <div class="si-icon" style="background:rgba(240,136,62,.15);color:var(--orange)">⏳</div>
+                <div style="flex:1;min-width:0">
+                  <div class="si-name">${esc(r.subjects?.name || '—')}</div>
+                  <div class="si-sub">Awaiting approval</div>
+                </div>
+              </div>`).join('')}` : ''}
+        </div>
+        ${isAdmin() ? `<div class="sidebar-footer"><button class="btn btn-warn btn-sm" style="width:100%;justify-content:center" onclick="goAdmin()">⚙️ Admin Panel</button></div>` : ''}
+      </aside>
+      <main class="main-panel">
+        <div class="search-area">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" placeholder="Search subjects by name or code…" value="${esc(S.searchTerm)}" oninput="S.searchTerm=this.value;loadSubjects().then(updateDashGrid)">
+          </div>
+        </div>
+        ${renderCategoryFilters()}
+        <div class="panel-hd">
+          <span>All Subjects (${S.subjects.length})</span>
+          ${canCreate ? `<button class="btn btn-primary btn-sm" onclick="S.modal='newSubject';render()">+ New Subject</button>` : ''}
+        </div>
+        <div class="subjects-grid">${allSubjectsHTML()}</div>
+      </main>
+    </div>
+  </div>`
         }
 
-        /* ═══════════════ ADMIN PAGE ═══════════════ */
+        // ─── ADMIN ───
         function renderAdminPage() {
             const tabs = [
                 { id: 'overview', label: '📊 Overview' },
                 { id: 'requests', label: `📋 Requests${S.adminStats.pending > 0 ? ` (${S.adminStats.pending})` : ''}` },
-                { id: 'subjects', label: '📚 Subjects' },
-                { id: 'users', label: '👥 Users' },
+                { id: 'subjects', label: `📚 Subjects (${S.adminStats.subjects})` },
+                { id: 'users', label: `👥 Users (${S.adminStats.users})` },
                 { id: 'messages', label: '💬 Messages' }
             ];
-
-            return `
-    <div class="shell page">
-        ${renderTopNav()}
-        <div class="admin-page">
-        <div class="admin-tabs">
-            ${tabs.map(t => `<button class="admin-tab-btn ${S.adminTab === t.id ? 'active' : ''}" onclick="S.adminTab='${t.id}';render()">${t.label}</button>`).join('')}
-        </div>
-
-        ${S.adminTab === 'overview' ? renderAdminOverview() : ''}
-        ${S.adminTab === 'requests' ? renderAdminRequests() : ''}
-        ${S.adminTab === 'subjects' ? renderAdminSubjects() : ''}
-        ${S.adminTab === 'users' ? renderAdminUsers() : ''}
-        ${S.adminTab === 'messages' ? renderAdminMessages() : ''}
-        </div>
-    </div>`;
+            return `<div class="shell page">
+    ${renderTopNav()}
+    <div class="admin-page">
+      <div class="admin-tabs">
+        ${tabs.map(t => `<button class="admin-tab-btn ${S.adminTab === t.id ? 'active' : ''}" onclick="S.adminTab='${t.id}';render()">${t.label}</button>`).join('')}
+      </div>
+      ${S.adminTab === 'overview' ? renderAdminOverview() : ''}
+      ${S.adminTab === 'requests' ? renderAdminRequests() : ''}
+      ${S.adminTab === 'subjects' ? renderAdminSubjects() : ''}
+      ${S.adminTab === 'users' ? renderAdminUsers() : ''}
+      ${S.adminTab === 'messages' ? renderAdminMessages() : ''}
+    </div>
+  </div>`
         }
 
         function renderAdminOverview() {
-            return `
-    <div class="admin-section">
-        <div class="admin-section-hd">📊 Overview</div>
-        <div class="stat-grid">
-        <div class="stat-card"><div class="stat-val">${S.adminStats.subjects}</div><div class="stat-lbl">Total Subjects</div></div>
-        <div class="stat-card"><div class="stat-val">${S.adminStats.users}</div><div class="stat-lbl">Registered Users</div></div>
-        <div class="stat-card"><div class="stat-val">${S.adminStats.messages}</div><div class="stat-lbl">Total Messages</div></div>
-        <div class="stat-card" style="border-color:${S.adminStats.pending > 0 ? 'var(--orange)' : 'var(--border)'}">
-            <div class="stat-val" style="color:${S.adminStats.pending > 0 ? 'var(--orange)' : 'inherit'}">${S.adminStats.pending}</div>
-            <div class="stat-lbl">Pending Requests</div>
-        </div>
-        </div>
+            return `<div class="admin-section">
+    <div class="admin-section-hd">📊 Platform Overview</div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-val">${S.adminStats.subjects}</div><div class="stat-lbl">Total Subjects</div></div>
+      <div class="stat-card"><div class="stat-val">${S.adminStats.users}</div><div class="stat-lbl">Registered Users</div></div>
+      <div class="stat-card"><div class="stat-val">${S.adminStats.messages}</div><div class="stat-lbl">Total Messages</div></div>
+      <div class="stat-card"><div class="stat-val">${S.adminStats.requests}</div><div class="stat-lbl">Total Requests</div></div>
+      <div class="stat-card" style="border-color:${S.adminStats.pending > 0 ? 'var(--orange)' : 'var(--border)'}">
+        <div class="stat-val" style="${S.adminStats.pending > 0 ? 'color:var(--orange)' : ''}">${S.adminStats.pending}</div>
+        <div class="stat-lbl">Pending Review</div>
+      </div>
     </div>
-    ${S.adminStats.pending > 0 ? `
-        <div class="admin-section" style="border-color:var(--orange)">
-        <div class="admin-section-hd" style="color:var(--orange)">⚠️ Action Required — Pending Join Requests</div>
-        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
-            ${renderRequestCards()}
-        </div>
-        </div>
-    ` : ''}`;
+  </div>
+  ${S.adminStats.pending > 0 ? `
+    <div class="admin-section" style="border-color:var(--orange)">
+      <div class="admin-section-hd" style="color:var(--orange)">⚠️ Pending Join Requests</div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">${renderRequestCards()}</div>
+    </div>`: ''}`
         }
+function renderRequestCards() {
 
-        function renderRequestCards() {
-            if (S.adminRequests.length === 0) return `<p style="color:var(--txt3);font-size:14px">No pending requests.</p>`;
-            return S.adminRequests.map(req => {
-                const user = req.users || {}; const subj = req.subjects || {};
-                return `
+    if (!S.adminRequests || S.adminRequests.length === 0) {
+        return `
+            <p style="
+                color:var(--txt3);
+                font-size:14px;
+                padding:8px 0;
+            ">
+                No join requests found.
+            </p>
+        `;
+    }
+
+    return S.adminRequests.map(req => {
+
+        const user = req.user || {};
+        const subj = req.subject || {};
+
+        return `
         <div class="req-card">
-        ${avHTML(user, 'av av-md')}
-        <div class="req-body">
-            <div class="req-name">${esc(user.display_name || user.email)}</div>
-            <div class="req-meta">Wants to join <strong>${esc(subj.name)}</strong> (${esc(subj.code)}) · ${dateStr(req.created_at)}</div>
-            ${req.schedule_url ? `
-            <div style="margin-top:8px">
-                <button class="btn btn-ghost btn-xs" onclick="S.modal='viewSchedule';S.lightboxSrc='${esc(req.schedule_url)}';S.lightboxType='${esc(req.schedule_name || '')}';render()">
-                📎 View Schedule (${esc(req.schedule_name || 'file')})
-                </button>
+
+            <div class="req-user">
+
+                ${user.avatar_url
+                    ? `<img src="${esc(user.avatar_url)}" class="av av-md">`
+                    : avHTML(user, 'av av-md')
+                }
+
+                <div class="req-body">
+
+                    <div class="req-name">
+                        ${esc(user.display_name || user.email || 'Unknown User')}
+                    </div>
+
+                    <div class="req-email">
+                        ${esc(user.email || '')}
+                    </div>
+
+                    <div class="req-meta">
+                        Wants to join
+                        <strong>${esc(subj.name || 'Unknown Subject')}</strong>
+                    </div>
+
+                    <div class="req-subject-details">
+
+                        <div>📖 ${esc(subj.subj_code || '-')}</div>
+
+                        <div>🏫 Section: ${esc(subj.section || '-')}</div>
+
+                        <div>📚 Type: ${esc(subj.type || '-')}</div>
+
+                        <div>📅 Days: ${esc(subj.days || '-')}</div>
+
+                        <div>
+                            🕒
+                            ${esc(subj.time_start || '-')}
+                            -
+                            ${esc(subj.time_end || '-')}
+                        </div>
+
+                        <div>🚪 Room: ${esc(subj.room || '-')}</div>
+
+                        <div>
+                            📝 Requested:
+                            ${dateStr(req.created_at)}
+                        </div>
+
+                        <div>
+                            📌 Status:
+                            <strong>${esc(req.status || 'pending')}</strong>
+                        </div>
+
+                    </div>
+
+                    ${req.schedule_url ? `
+                        <div style="margin-top:10px">
+                            <button
+                                class="btn btn-ghost btn-xs"
+                                onclick="
+                                    S.modal='viewSchedule';
+                                    S.lightboxSrc='${esc(req.schedule_url)}';
+                                    S.lightboxType='${esc(req.schedule_name || '')}';
+                                    render();
+                                "
+                            >
+                                📎 View Schedule
+                            </button>
+                        </div>
+                    ` : ''}
+
+                </div>
+
             </div>
-            ` : ''}
+
+            <div class="req-actions">
+
+                ${req.status === 'pending' ? `
+                    <button
+                        class="btn btn-success btn-sm"
+                        onclick="approveRequest(
+                            S.adminRequests.find(x => x.id === '${req.id}')
+                        )"
+                    >
+                        ✓ Approve
+                    </button>
+
+                    <button
+                        class="btn btn-danger btn-sm"
+                        onclick="rejectRequest('${req.id}')"
+                    >
+                        ✕ Reject
+                    </button>
+                ` : ''}
+
+            </div>
+
         </div>
-        <div class="req-actions">
-            <button class="btn btn-success btn-sm" onclick="approveRequest(${safeJson(req)})">✓ Approve</button>
-            <button class="btn btn-danger btn-sm" onclick="rejectRequest('${esc(req.id)}')">✕ Reject</button>
-        </div>
-        </div>`;
-            }).join('');
-        }
+        `;
+
+    }).join('');
+}
 
         function renderAdminRequests() {
-            return `
-    <div class="admin-section">
-        <div class="admin-section-hd">📋 Join Requests</div>
-        <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
-        ${renderRequestCards()}
-        </div>
-    </div>`;
+            return `<div class="admin-section">
+    <div class="admin-section-hd">📋 Join Requests (${S.adminStats.pending} pending)</div>
+    <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">${renderRequestCards()}</div>
+  </div>`
         }
 
         function renderAdminSubjects() {
-            return `
-    <div class="admin-section">
-        <div class="admin-section-hd">
-        📚 Subjects Management
-        <button class="btn btn-primary btn-sm" onclick="S.modal='newSubject';render()">+ Add Subject</button>
-        </div>
-        <div class="admin-table-wrap">
-        <table>
-            <thead><tr><th>Name</th><th>Code</th><th>Description</th><th>Created By</th><th>Created</th><th>Actions</th></tr></thead>
-            <tbody>
-            ${S.adminSubjects.length === 0
-                    ? `<tr><td colspan="6" style="text-align:center;color:var(--txt3);padding:30px">No subjects yet</td></tr>`
-                    : S.adminSubjects.map(s => `
-                <tr>
-                    <td><strong>${esc(s.name)}</strong></td>
-                    <td><span class="badge">${esc(s.code)}</span></td>
-                    <td style="color:var(--txt2);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.description || '—')}</td>
-                    <td style="color:var(--txt2)">${esc(s.users?.display_name || s.users?.email || '—')}</td>
-                    <td style="color:var(--txt3)">${dateStr(s.created_at)}</td>
-                    <td>
-                    <div style="display:flex;gap:5px;flex-wrap:wrap">
-                        <button class="btn btn-ghost btn-xs" onclick='openEditSubject(${safeJson(s)})'>✏ Edit</button>
-                        <button class="btn btn-danger btn-xs" onclick="confirmDelete('subject','${esc(s.id)}','${esc(s.name)}')">🗑 Delete</button>
-                    </div>
-                    </td>
-                </tr>`).join('')}
-            </tbody>
-        </table>
-        </div>
-    </div>`;
+            return `<div class="admin-section">
+    <div class="admin-section-hd">
+      📚 Subjects (${S.adminStats.subjects})
+      <button class="btn btn-primary btn-sm" onclick="S.modal='newSubject';render()">+ Add Subject</button>
+    </div>
+    <div class="admin-table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Code</th><th>Category</th><th>Description</th><th>Created By</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${S.adminSubjects.length === 0 ? `<tr><td colspan="7" style="text-align:center;color:var(--txt3);padding:32px">No subjects yet</td></tr>`
+                    : S.adminSubjects.map(s => `<tr>
+            <td><strong>${esc(s.name)}</strong></td>
+            <td><span class="sc-code" style="font-size:11px">${esc(s.code)}</span></td>
+            <td>${s.category ? `<span class="sc-cat ${catClass(s.category)}">${esc(s.category)}${s.subcategory ? ` · ${esc(s.subcategory)}` : ''}</span>` : '—'}</td>
+            <td style="color:var(--txt2);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.description || '—')}</td>
+            <td style="color:var(--txt2)">${esc(s.users?.display_name || s.users?.email || '—')}</td>
+            <td style="color:var(--txt3);white-space:nowrap">${dateStr(s.created_at)}</td>
+            <td>
+              <div style="display:flex;gap:5px;flex-wrap:wrap">
+                <button class="btn btn-ghost btn-xs" onclick='openEditSubject(${safeJson(s)})'>✏ Edit</button>
+                <button class="btn btn-danger btn-xs" onclick="confirmDelete('subject','${esc(s.id)}','${esc(s.name)}')">🗑</button>
+              </div>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>`
         }
 
         function renderAdminUsers() {
-            return `
-    <div class="admin-section">
-        <div class="admin-section-hd">👥 User Management</div>
-        <div class="admin-table-wrap">
-        <table>
-            <thead><tr><th>User</th><th>Email</th><th>Bio</th><th>Role</th><th>Joined</th><th>Actions</th></tr></thead>
-            <tbody>
-            ${S.adminUsers.length === 0
-                    ? `<tr><td colspan="6" style="text-align:center;color:var(--txt3);padding:30px">No users</td></tr>`
+            return `<div class="admin-section">
+    <div class="admin-section-hd">👥 Users (${S.adminStats.users})</div>
+    <div class="admin-table-wrap">
+      <table>
+        <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Joined</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${S.adminUsers.length === 0 ? `<tr><td colspan="5" style="text-align:center;color:var(--txt3);padding:32px">No users</td></tr>`
                     : S.adminUsers.map(u => {
                         const isSelf = u.id === S.user.id;
                         return `<tr>
-                    <td>
-                        <div style="display:flex;align-items:center;gap:8px">
-                        ${avHTML(u, 'av av-sm')}
-                        <span style="font-weight:600">${esc(u.display_name || u.email)}</span>
-                        ${isSelf ? '<span style="font-size:11px;color:var(--txt3)">(you)</span>' : ''}
-                        </div>
-                    </td>
-                    <td style="color:var(--txt2)">${esc(u.email)}</td>
-                    <td style="color:var(--txt2);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(u.bio || '—')}</td>
-                    <td>${u.is_admin ? '<span class="badge badge-admin">Admin</span>' : '<span style="font-size:12px;color:var(--txt3)">Student</span>'}</td>
-                    <td style="color:var(--txt3)">${dateStr(u.created_at)}</td>
-                    <td>
-                        <div style="display:flex;gap:5px;flex-wrap:wrap">
-                        ${!isSelf ? `
-                            <button class="btn btn-xs ${u.is_admin ? 'btn-warn' : 'btn-success'}" onclick="toggleAdminRole('${esc(u.id)}',${!!u.is_admin})">
-                            ${u.is_admin ? '⬇ Demote' : '⬆ Promote'}
-                            </button>
-                            <button class="btn btn-danger btn-xs" onclick="confirmDelete('user','${esc(u.id)}','${esc(u.display_name || u.email)}')">🗑 Remove</button>
-                        ` : '<span style="color:var(--txt3);font-size:12px">—</span>'}
-                        </div>
-                    </td>
-                    </tr>`;
+              <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                  ${avHTML(u, 'av av-sm')}
+                  <span style="font-weight:600">${esc(u.display_name || u.email)}</span>
+                  ${isSelf ? '<span style="font-size:11px;color:var(--txt3)">(you)</span>' : ''}
+                </div>
+              </td>
+              <td style="color:var(--txt2)">${esc(u.email)}</td>
+              <td>
+                ${u.is_admin ? '<span class="status-badge badge-admin">Admin</span>' : ''}
+                ${u.is_teacher ? '<span class="status-badge badge-teacher">Teacher</span>' : ''}
+                ${!u.is_admin && !u.is_teacher ? '<span style="font-size:12px;color:var(--txt3)">Student</span>' : ''}
+              </td>
+              <td style="color:var(--txt3);white-space:nowrap">${dateStr(u.created_at)}</td>
+              <td>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  ${!isSelf ? `
+                    ${!u.is_teacher ? `<button class="btn btn-xs ${u.is_admin ? 'btn-warn' : 'btn-success'}" onclick="toggleAdminRole('${esc(u.id)}',${!!u.is_admin})">${u.is_admin ? 'Demote' : '⬆ Admin'}</button>` : ''}
+                    <button class="btn btn-xs btn-teal" onclick="toggleTeacherRole('${esc(u.id)}',${!!u.is_teacher})">${u.is_teacher ? 'Revoke Teacher' : '👨‍🏫 Teacher'}</button>
+                    <button class="btn btn-danger btn-xs" onclick="confirmDelete('user','${esc(u.id)}','${esc(u.display_name || u.email)}')">🗑</button>
+                  `: '<span style="color:var(--txt3);font-size:12px">—</span>'}
+                </div>
+              </td>
+            </tr>`
                     }).join('')}
-            </tbody>
-        </table>
-        </div>
-    </div>`;
+        </tbody>
+      </table>
+    </div>
+  </div>`
         }
 
-        // Admin messages tab — load from all subjects with ability to delete
         function renderAdminMessages() {
-            return `
-    <div class="admin-section">
-        <div class="admin-section-hd">💬 Message Overview</div>
-        <div style="padding:20px;text-align:center;color:var(--txt2);font-size:14px">
-        <p style="margin-bottom:16px">To manage messages, open a subject's chat. As admin you can delete any message.</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
-            ${S.adminSubjects.map(s => `
-            <button class="btn btn-ghost btn-sm" onclick="goToChat(${safeJson(s)});S.showMembers=false">
-                💬 ${esc(s.name)}
-            </button>`).join('')}
-        </div>
-        </div>
-    </div>`;
+            return `<div class="admin-section">
+    <div class="admin-section-hd">💬 Message Management</div>
+    <div style="padding:20px;text-align:center">
+      <p style="color:var(--txt2);font-size:14px;margin-bottom:16px">Open a subject's chat to view and delete messages as admin.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+        ${S.adminSubjects.map(s => `<button class="btn btn-ghost btn-sm" onclick="goToChat(${safeJson(s)});S.showMembers=false">💬 ${esc(s.name)}</button>`).join('')}
+      </div>
+    </div>
+  </div>`
         }
 
-        function openEditSubject(s) { S.editSubjectData = s; S.modal = 'editSubject'; render(); }
-
-        /* ═══════════════ CHAT RENDER ═══════════════ */
+        // ─── CHAT ───
         function renderChat() {
             const subj = S.currentSubject;
-            return `
-    <div class="shell page">
-        ${renderTopNav()}
-        <div class="chat-shell">
-        <div class="chat-header">
-            <div class="chat-header-left">
-            <button class="back-btn" onclick="goToDashboard()">←</button>
-            <div class="chat-header-info">
-                <h2>${esc(subj.name)}</h2>
-                <p>${esc(subj.code)} · ${S.members.length} member${S.members.length !== 1 ? 's' : ''}</p>
-            </div>
-            </div>
-            <div class="chat-header-right">
-            <button class="btn btn-ghost btn-sm" onclick="S.showMembers=!S.showMembers;render()">
-                ${S.showMembers ? 'Hide' : '👥'} Members
-            </button>
-            ${!isAdmin() ? `<button class="btn btn-danger btn-sm" onclick="if(confirm('Leave this subject?'))leaveSubject()">Leave</button>` : ''}
-            </div>
+            return `<div class="shell page">
+    ${renderTopNav()}
+    <div class="chat-shell">
+      <div class="chat-header">
+        <div class="chat-header-left">
+          <button class="back-btn" onclick="goToDashboard()">←</button>
+          <div>
+            <div class="chat-header-info"><h2>${esc(subj.name)}</h2></div>
+            <div class="chat-header-info"><p>${esc(subj.code)}${subj.category ? ` · ${subj.category}` : ''} · ${S.members.length} member${S.members.length !== 1 ? 's' : ''}</p></div>
+          </div>
         </div>
-        <div class="chat-body">
-            <div class="msgs-area">
-            <div class="msgs-scroll">${renderMessages()}</div>
-            ${renderInputArea()}
-            </div>
-            ${S.showMembers ? renderMembersPanel() : ''}
+        <div class="chat-header-right">
+          <button class="btn btn-ghost btn-sm" onclick="S.showMembers=!S.showMembers;render()">${S.showMembers ? 'Hide Members' : '👥 Members'}</button>
+          ${!isAdmin() && !isTeacher() ? `<button class="btn btn-danger btn-sm" onclick="if(confirm('Leave this subject?'))leaveSubject()">Leave</button>` : ''}
         </div>
+      </div>
+      <div class="chat-body">
+        <div class="msgs-area">
+          <div class="msgs-scroll">${renderMessages()}</div>
+          ${renderInputArea()}
         </div>
-    </div>`;
+        ${S.showMembers ? renderMembersPanel() : ''}
+      </div>
+    </div>
+  </div>`
         }
 
         function renderMessages() {
-            if (S.messages.length === 0)
-                return `<div class="empty-state"><div class="empty-state-icon">💬</div><p>No messages yet — say hi!</p></div>`;
+            if (S.messages.length === 0) return `<div class="empty-state"><span class="empty-icon">💬</span><div class="empty-title">No messages yet</div><div class="empty-sub">Be the first to say hello!</div></div>`;
             return S.messages.map(msg => {
                 const isOwn = msg.user_id === S.user.id;
                 const canDel = isOwn || isAdmin();
                 const user = msg.users || {};
                 const delFn = isOwn ? `deleteMessage('${msg.id}')` : `adminDeleteMsg('${msg.id}')`;
-                return `
-        <div class="msg-group ${isOwn ? 'own' : ''}">
-        ${!isOwn ? avHTML(user, 'av av-sm') : ''}
-        <div class="msg-content" style="${isOwn ? 'align-items:flex-end' : ''}">
-            ${!isOwn ? `<div class="msg-sender">${esc(user.display_name || user.email)}</div>` : ''}
-            <div class="msg-bubble ${isOwn ? 'own' : 'other'}">
-            ${msg.message ? esc(msg.message) : ''}
-            ${msg.attachment_url ? renderAttachment(msg) : ''}
-            </div>
-            <div class="msg-meta">
-            <span>${tstr(msg.created_at)}</span>
-            ${canDel ? `<button class="msg-del-btn" onclick="${delFn}">delete</button>` : ''}
-            </div>
+                return `<div class="msg-group ${isOwn ? 'own' : ''}">
+      ${!isOwn ? avHTML(user, 'av av-sm') : ''}
+      <div class="msg-content ${isOwn ? 'own' : ''}">
+        ${!isOwn ? `<div class="msg-sender">${esc(user.display_name || user.email)}</div>` : ''}
+        <div class="msg-bubble ${isOwn ? 'own' : 'other'}">
+          ${msg.message ? esc(msg.message) : ''}
+          ${msg.attachment_url ? renderAttachment(msg) : ''}
         </div>
-        ${isOwn ? avHTML(S.profile || { email: S.user?.email }, 'av av-sm') : ''}
-        </div>`;
-            }).join('');
+        <div class="msg-meta">
+          <span>${tstr(msg.created_at)}</span>
+          ${canDel ? `<button class="msg-del-btn" onclick="${delFn}">delete</button>` : ''}
+        </div>
+      </div>
+      ${isOwn ? avHTML(S.profile || { email: S.user?.email }, 'av av-sm') : ''}
+    </div>`
+            }).join('')
         }
 
         function renderAttachment(msg) {
             const url = msg.attachment_url, name = msg.attachment_name || 'file', sz = fmtSize(msg.attachment_size);
-            if (msg.attachment_type === 'image')
-                return `<div class="msg-attachment"><img src="${esc(url)}" alt="${esc(name)}" onclick="openLightbox('${esc(url)}','image')"></div>`;
-            if (msg.attachment_type === 'video')
-                return `<div class="msg-attachment"><video src="${esc(url)}" controls onclick="openLightbox('${esc(url)}','video')"></video></div>`;
+            if (msg.attachment_type === 'image') return `<div class="msg-attachment"><img src="${esc(url)}" alt="${esc(name)}" onclick="openLightbox('${esc(url)}','image')"></div>`;
+            if (msg.attachment_type === 'video') return `<div class="msg-attachment"><video src="${esc(url)}" controls onclick="openLightbox('${esc(url)}','video')"></video></div>`;
             return `<div class="msg-attachment"><a class="msg-file" href="${esc(url)}" target="_blank" download="${esc(name)}">
-        <div class="msg-file-icon">${fileIcon(name)}</div>
-        <div><div class="msg-file-name">${esc(name)}</div>${sz ? `<div class="msg-file-size">${sz}</div>` : ''}</div>
-        <span style="color:var(--txt3);margin-left:auto">↓</span>
-    </a></div>`;
+    <div class="msg-file-icon">${fileIcon(name)}</div>
+    <div><div class="msg-file-name">${esc(name)}</div>${sz ? `<div class="msg-file-size">${sz}</div>` : ''}</div>
+    <span style="color:var(--txt3);margin-left:auto">↓</span>
+  </a></div>`
         }
 
         function renderInputArea() {
@@ -2470,197 +2855,193 @@
                 const isImg = f.type.startsWith('image/'), isVid = f.type.startsWith('video/');
                 const url = URL.createObjectURL(f);
                 return `<div class="attach-thumb">
-        ${isImg ? `<img src="${url}">` : isVid ? `<video src="${url}">` : `<div class="attach-icon">${fileIcon(f.name)}</div>`}
-        <button class="rm-btn" type="button" onclick="removePendingFile(${i})">×</button>
-        </div>`;
+      ${isImg ? `<img src="${url}">` : (isVid ? `<video src="${url}">` : `<div class="attach-icon-wrap">${fileIcon(f.name)}</div>`)}
+      <button class="rm-btn" type="button" onclick="removePendingFile(${i})">×</button>
+    </div>`
             }).join('');
-            return `
-    <div class="msg-input-area">
-        ${S.pendingFiles.length ? `<div class="attach-strip">${thumbs}</div>` : ''}
-        ${S.uploading ? `<div class="upload-bar"><div class="spinner"></div>Uploading…</div>` : ''}
-        <div class="msg-input-row">
-        <button class="attach-btn" type="button" title="Attach files" onclick="document.getElementById('fileInput').click()">📎</button>
-        <textarea id="msgInput" placeholder="Type a message… (Enter to send)" rows="1"
-            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"
-            oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,110)+'px'"></textarea>
-        <button class="send-btn" type="button" onclick="sendMessage()">➤</button>
-        </div>
-    </div>`;
+            return `<div class="msg-input-area">
+    ${S.pendingFiles.length ? `<div class="attach-strip">${thumbs}</div>` : ''}
+    ${S.uploading ? `<div class="upload-bar"><div class="spinner"></div>Uploading…</div>` : ''}
+    <div class="msg-input-row">
+      <button class="icon-btn attach-btn" type="button" title="Attach file" onclick="document.getElementById('fileInput').click()">📎</button>
+      <textarea id="msgInput" placeholder="Type a message… (Enter to send, Shift+Enter for new line)" rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,110)+'px'"></textarea>
+      <button class="icon-btn send-btn" type="button" onclick="sendMessage()">➤</button>
+    </div>
+  </div>`
         }
 
         function renderMembersPanel() {
-            return `
-    <div class="members-panel">
-        <div class="members-hd">Members (${S.members.length})</div>
-        <div class="members-list">
-        ${S.members.map(m => `
+            return `<div class="members-panel">
+    <div class="members-hd">Members (${S.members.length})</div>
+    <div class="members-list">
+      ${S.members.map(m => `
         <div class="member-row">
-            ${avHTML(m, 'av av-sm')}
-            <div style="flex:1;min-width:0">
-            <div class="member-name-text">${esc(m.display_name || m.email)}</div>
-            <div class="member-email-text">${esc(m.email)}</div>
-            </div>
+          ${avHTML(m, 'av av-sm')}
+          <div style="flex:1;min-width:0">
+            <div class="member-name">${esc(m.display_name || m.email)}</div>
+            <div class="member-email">${esc(m.email)}</div>
+          </div>
         </div>`).join('')}
-        </div>
-    </div>`;
+    </div>
+  </div>`
         }
 
-        /* ═══════════════ MODALS ═══════════════ */
+        // ─── MODALS ───
         function renderProfileModal() {
             const p = S.profile || {};
-            return `
-    <div class="modal-overlay" onclick="if(event.target===this){S.modal=null;render()}">
-        <div class="modal-box fade-up">
-        <div class="modal-hd"><h2>Profile Settings</h2><button class="modal-close" onclick="S.modal=null;render()">×</button></div>
-        <div class="modal-form">
-            <div class="avatar-zone">
-            ${avHTML(p, 'av av-lg')}
-            <div class="avatar-zone-right">
-                <div style="font-weight:700">${esc(p.display_name || p.email || '')}</div>
-                <div style="font-size:12px;color:var(--txt3)">${esc(p.email || '')}</div>
-                ${isAdmin() ? '<span class="badge badge-admin" style="width:fit-content">Administrator</span>' : ''}
-                <button class="avatar-change-btn" onclick="document.getElementById('avatarInput').click()" ${S.uploading ? 'disabled' : ''}>
-                ${S.uploading ? '⏳ Uploading…' : '📷 Change Photo'}
-                </button>
-            </div>
-            </div>
-            <div class="form-field"><label>Display Name</label><input id="profileName" type="text" value="${esc(p.display_name || '')}" placeholder="Your name"></div>
-            <div class="form-field"><label>Bio</label><textarea id="profileBio" rows="3" placeholder="Tell something about yourself…">${esc(p.bio || '')}</textarea></div>
-            <div class="form-field"><label>Email</label><input type="email" value="${esc(p.email || '')}" disabled></div>
-            <div class="modal-footer">
-            <button class="btn btn-ghost" onclick="S.modal=null;render()">Cancel</button>
-            <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
-            </div>
+            return `<div class="modal-overlay" onclick="if(event.target===this){S.modal=null;render()}">
+    <div class="modal-box fade-up">
+      <div class="modal-hd"><h2>Profile Settings</h2><button class="modal-close" onclick="S.modal=null;render()">×</button></div>
+      <div class="modal-form">
+        <div class="avatar-zone">
+          ${avHTML(p, 'av av-lg')}
+          <div class="avatar-zone-right">
+            <div style="font-weight:700">${esc(p.display_name || p.email || '')}</div>
+            <div style="font-size:12px;color:var(--txt3)">${esc(p.email || '')}</div>
+            ${isAdmin() ? '<span class="status-badge badge-admin" style="width:fit-content">Administrator</span>' : ''}
+            ${isTeacher() ? '<span class="status-badge badge-teacher" style="width:fit-content">Teacher</span>' : ''}
+            <button class="btn btn-ghost btn-sm" onclick="document.getElementById('avatarInput').click()" ${S.uploading ? 'disabled' : ''}>
+              ${S.uploading ? '⏳ Uploading…' : '📷 Change Photo'}
+            </button>
+          </div>
         </div>
+        <div class="form-field"><label>Display Name</label><input id="profileName" type="text" value="${esc(p.display_name || '')}" placeholder="Your name"></div>
+        <div class="form-field"><label>Bio</label><textarea id="profileBio" rows="3" placeholder="Tell us about yourself…">${esc(p.bio || '')}</textarea></div>
+        <div class="form-field"><label>Email</label><input type="email" value="${esc(p.email || '')}" disabled></div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="S.modal=null;render()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
         </div>
-    </div>`;
+      </div>
+    </div>
+  </div>`
+        }
+
+        function renderNewSubjectModal() {
+            // Get current selection to show subcats
+            const selCat = S.newSubjCat || 'NSTP';
+            const subcats = CATEGORIES[selCat]?.subcats || [];
+            const catOpts = Object.keys(CATEGORIES).map(k => `<option value="${k}" ${selCat === k ? 'selected' : ''}>${CATEGORIES[k].icon} ${CATEGORIES[k].label}</option>`).join('');
+            return `<div class="modal-overlay" onclick="if(event.target===this){S.modal=null;render()}">
+    <div class="modal-box fade-up">
+      <div class="modal-hd"><h2>${isTeacher() ? '👨‍🏫 Create New Subject' : 'Add New Subject'}</h2><button class="modal-close" onclick="S.modal=null;render()">×</button></div>
+      <div class="modal-form">
+        <div class="form-field"><label>Subject Name *</label><input id="newSubjName" type="text" placeholder="e.g. Mathematics 101" autofocus></div>
+        <div class="form-field"><label>Subject Code *</label><input id="newSubjCode" type="text" placeholder="e.g. MATH101" oninput="this.value=this.value.toUpperCase()"></div>
+        <div class="form-field">
+          <label>Category *</label>
+          <select id="newSubjCategory" onchange="S.newSubjCat=this.value;render()">${catOpts}</select>
+        </div>
+        ${subcats.length > 0 ? `<div class="form-field"><label>Subcategory</label><select id="newSubjSubcategory"><option value="">— None —</option>${subcats.map(s => `<option value="${s}">${s}</option>`).join('')}</select></div>` : ''}
+        <div class="form-field"><label>Description</label><textarea id="newSubjDesc" rows="3" placeholder="Brief description of this subject…"></textarea></div>
+        <div class="info-box">ℹ️ You will automatically join this subject as ${isTeacher() ? 'the teacher' : 'creator'} once created.</div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="S.modal=null;render()">Cancel</button>
+          <button id="createSubjBtn" class="btn btn-primary" onclick="createSubject()">Create Subject</button>
+        </div>
+      </div>
+    </div>
+  </div>`
+        }
+
+        function renderEditSubjectModal() {
+            const s = S.editSubjectData || {};
+            const catOpts = Object.keys(CATEGORIES).map(k => `<option value="${k}" ${s.category === k ? 'selected' : ''}>${CATEGORIES[k].icon} ${CATEGORIES[k].label}</option>`).join('');
+            const subcats = CATEGORIES[s.category]?.subcats || [];
+            return `<div class="modal-overlay" onclick="if(event.target===this){S.modal=null;render()}">
+    <div class="modal-box fade-up">
+      <div class="modal-hd"><h2>Edit Subject</h2><button class="modal-close" onclick="S.modal=null;render()">×</button></div>
+      <div class="modal-form">
+        <div class="form-field"><label>Subject Name *</label><input id="editSubjName" type="text" value="${esc(s.name || '')}"></div>
+        <div class="form-field"><label>Subject Code *</label><input id="editSubjCode" type="text" value="${esc(s.code || '')}" oninput="this.value=this.value.toUpperCase()"></div>
+        <div class="form-field"><label>Category *</label><select id="editSubjCategory">${catOpts}</select></div>
+        ${subcats.length > 0 ? `<div class="form-field"><label>Subcategory</label><select id="editSubjSubcategory"><option value="">— None —</option>${subcats.map(sc => `<option value="${sc}" ${s.subcategory === sc ? 'selected' : ''}>${sc}</option>`).join('')}</select></div>` : ''}
+        <div class="form-field"><label>Description</label><textarea id="editSubjDesc" rows="3">${esc(s.description || '')}</textarea></div>
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="S.modal=null;render()">Cancel</button>
+          <button class="btn btn-primary" onclick="updateSubject()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>`
         }
 
         function renderJoinRequestModal() {
             const subj = S.editSubjectData || {};
             const hasFile = !!S.scheduleFile;
-            return `
-    <div class="modal-overlay" onclick="if(event.target===this){S.modal=null;S.scheduleFile=null;render()}">
-        <div class="modal-box fade-up">
-        <div class="modal-hd">
-            <h2>Request to Join</h2>
-            <button class="modal-close" onclick="S.modal=null;S.scheduleFile=null;render()">×</button>
+            return `<div class="modal-overlay" onclick="if(event.target===this){S.modal=null;S.scheduleFile=null;render()}">
+    <div class="modal-box fade-up">
+      <div class="modal-hd"><h2>Request to Join</h2><button class="modal-close" onclick="S.modal=null;S.scheduleFile=null;render()">×</button></div>
+      <div class="modal-form">
+        <div class="info-box">
+          📚 You're requesting to join <strong>${esc(subj.name)}</strong> (${esc(subj.code)}).<br>
+          Attach your class schedule to verify enrollment.
         </div>
-        <div class="modal-form">
-            <div class="info-text">
-            📚 You're requesting to join <strong>${esc(subj.name)}</strong> (${esc(subj.code)}).<br>
-            Please attach your class schedule to verify you're enrolled in this subject.
-            </div>
-            <div class="form-field">
-            <label>Your Class Schedule</label>
-            <div class="upload-zone ${hasFile ? 'has-file' : ''}" onclick="document.getElementById('scheduleInput').click()">
-                <div class="upload-zone-icon">${hasFile ? '✅' : '📎'}</div>
-                <div class="upload-zone-text">${hasFile ? 'Schedule attached' : 'Click to upload your schedule'}</div>
-                ${hasFile ? `<div class="upload-zone-file">${esc(S.scheduleFile.name)}</div>` : `<div style="font-size:12px;color:var(--txt3);margin-top:4px">Accepted: Image or PDF</div>`}
-            </div>
-            ${hasFile ? `<button class="btn btn-ghost btn-sm" style="width:fit-content;margin-top:4px" onclick="S.scheduleFile=null;render()">Remove file</button>` : ''}
-            </div>
-            ${S.uploading ? `<div class="upload-bar"><div class="spinner"></div>Submitting request…</div>` : ''}
-            <div class="modal-footer">
-            <button class="btn btn-ghost" onclick="S.modal=null;S.scheduleFile=null;render()">Cancel</button>
-            <button class="btn btn-primary" onclick="submitJoinRequest('${esc(subj.id)}')" ${S.uploading ? 'disabled' : ''}>
-                📋 Submit Request
-            </button>
-            </div>
+        <div class="form-field">
+          <label>Your Class Schedule *</label>
+          <div class="upload-zone ${hasFile ? 'has-file' : ''}" onclick="document.getElementById('scheduleInput').click()">
+            <div class="upload-zone-icon">${hasFile ? '✅' : '📎'}</div>
+            <div class="upload-zone-text">${hasFile ? 'Schedule ready to submit' : 'Click to upload your schedule'}</div>
+            ${hasFile ? `<div style="font-size:13px;color:var(--green);font-weight:600;margin-top:4px">${esc(S.scheduleFile.name)}</div>` : `<div style="font-size:12px;color:var(--txt3);margin-top:4px">Image or PDF accepted</div>`}
+          </div>
+          ${hasFile ? `<button class="btn btn-ghost btn-sm" style="width:fit-content" onclick="S.scheduleFile=null;render()">Remove file</button>` : ''}
         </div>
+        ${S.uploading ? `<div class="upload-bar"><div class="spinner"></div>Submitting request…</div>` : ''}
+        <div class="modal-footer">
+          <button class="btn btn-ghost" onclick="S.modal=null;S.scheduleFile=null;render()">Cancel</button>
+          <button class="btn btn-primary" onclick="submitJoinRequest('${esc(subj.id)}')" ${S.uploading ? 'disabled' : ''}>📋 Submit Request</button>
         </div>
-    </div>`;
-        }
-
-        function renderNewSubjectModal() {
-            return `
-    <div class="modal-overlay" onclick="if(event.target===this){S.modal=null;render()}">
-        <div class="modal-box fade-up">
-        <div class="modal-hd"><h2>Add New Subject</h2><button class="modal-close" onclick="S.modal=null;render()">×</button></div>
-        <div class="modal-form">
-            <div class="form-field"><label>Subject Name *</label><input id="newSubjName" type="text" placeholder="e.g. Mathematics 101" autofocus></div>
-            <div class="form-field"><label>Subject Code *</label><input id="newSubjCode" type="text" placeholder="e.g. MATH101" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="form-field"><label>Description</label><textarea id="newSubjDesc" rows="3" placeholder="Brief description of this subject…"></textarea></div>
-            <div class="modal-footer">
-            <button class="btn btn-ghost" onclick="S.modal=null;render()">Cancel</button>
-            <button class="btn btn-primary" onclick="createSubject()">Create Subject</button>
-            </div>
-        </div>
-        </div>
-    </div>`;
-        }
-
-        function renderEditSubjectModal() {
-            const s = S.editSubjectData || {};
-            return `
-    <div class="modal-overlay" onclick="if(event.target===this){S.modal=null;render()}">
-        <div class="modal-box fade-up">
-        <div class="modal-hd"><h2>Edit Subject</h2><button class="modal-close" onclick="S.modal=null;render()">×</button></div>
-        <div class="modal-form">
-            <div class="form-field"><label>Subject Name *</label><input id="editSubjName" type="text" value="${esc(s.name || '')}"></div>
-            <div class="form-field"><label>Subject Code *</label><input id="editSubjCode" type="text" value="${esc(s.code || '')}" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
-            <div class="form-field"><label>Description</label><textarea id="editSubjDesc" rows="3">${esc(s.description || '')}</textarea></div>
-            <div class="modal-footer">
-            <button class="btn btn-ghost" onclick="S.modal=null;render()">Cancel</button>
-            <button class="btn btn-primary" onclick="updateSubject()">Save Changes</button>
-            </div>
-        </div>
-        </div>
-    </div>`;
+      </div>
+    </div>
+  </div>`
         }
 
         function renderConfirmModal() {
             const t = S.deleteTarget || {};
-            const isUser = t.type === 'user';
-            return `
-    <div class="modal-overlay" onclick="if(event.target===this){S.modal=null;S.deleteTarget=null;render()}">
-        <div class="modal-box fade-up" style="max-width:380px">
-        <div class="modal-hd"><h2>Confirm Delete</h2><button class="modal-close" onclick="S.modal=null;S.deleteTarget=null;render()">×</button></div>
-        ${isUser ? '<div class="warning-text">⚠️ This will remove the user and all their messages.</div>' : ''}
-        <p style="font-size:14px;color:var(--txt2);line-height:1.6;margin-bottom:20px">
-            Are you sure you want to delete <strong style="color:var(--txt)">${esc(t.label)}</strong>?
-            ${t.type === 'subject' ? '<br><br>This will also delete <strong>all messages</strong> in this subject.' : ''}
-            <br>This action cannot be undone.
-        </p>
-        <div class="modal-footer">
-            <button class="btn btn-ghost" onclick="S.modal=null;S.deleteTarget=null;render()">Cancel</button>
-            <button class="btn btn-danger" onclick="executeDelete()">Delete</button>
-        </div>
-        </div>
-    </div>`;
+            return `<div class="modal-overlay" onclick="if(event.target===this){S.modal=null;S.deleteTarget=null;render()}">
+    <div class="modal-box fade-up" style="max-width:380px">
+      <div class="modal-hd"><h2>Confirm Delete</h2><button class="modal-close" onclick="S.modal=null;S.deleteTarget=null;render()">×</button></div>
+      ${t.type === 'user' ? '<div class="warn-box">⚠️ This will permanently remove the user and all their data.</div>' : ''}
+      <p style="font-size:14px;color:var(--txt2);line-height:1.6;margin-bottom:20px">
+        Delete <strong style="color:var(--txt)">${esc(t.label)}</strong>?
+        ${t.type === 'subject' ? '<br><br>All messages in this subject will also be deleted.' : ''}
+        <br>This cannot be undone.
+      </p>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="S.modal=null;S.deleteTarget=null;render()">Cancel</button>
+        <button class="btn btn-danger" onclick="executeDelete()">Delete</button>
+      </div>
+    </div>
+  </div>`
         }
 
         function renderViewScheduleModal() {
-            const src = S.lightboxSrc; const name = S.lightboxType || 'file';
+            const src = S.lightboxSrc, name = S.lightboxType || 'file';
             const isPdf = name.toLowerCase().endsWith('.pdf');
-            return `
-    <div class="modal-overlay" onclick="if(event.target===this){S.modal=null;render()}">
-        <div class="modal-box wide fade-up">
-        <div class="modal-hd">
-            <h2>📎 ${esc(name)}</h2>
-            <button class="modal-close" onclick="S.modal=null;render()">×</button>
-        </div>
-        ${isPdf
+            return `<div class="modal-overlay" onclick="if(event.target===this){S.modal=null;render()}">
+    <div class="modal-box wide fade-up">
+      <div class="modal-hd"><h2>📎 ${esc(name)}</h2><button class="modal-close" onclick="S.modal=null;render()">×</button></div>
+      ${isPdf
                     ? `<iframe src="${esc(src)}" style="width:100%;height:500px;border:none;border-radius:var(--r-md)"></iframe>`
                     : `<img src="${esc(src)}" alt="Schedule" style="width:100%;border-radius:var(--r-md);max-height:500px;object-fit:contain">`}
-        <div style="margin-top:14px;display:flex;justify-content:flex-end">
-            <a href="${esc(src)}" target="_blank" class="btn btn-ghost btn-sm">↗ Open in new tab</a>
-        </div>
-        </div>
-    </div>`;
+      <div style="margin-top:14px;display:flex;justify-content:flex-end">
+        <a href="${esc(src)}" target="_blank" class="btn btn-ghost btn-sm">↗ Open in new tab</a>
+      </div>
+    </div>
+  </div>`
         }
 
         function renderLightbox() {
-            return `
-    <div class="lightbox" onclick="S.modal=null;render()">
-        <button class="lightbox-close" onclick="S.modal=null;render()">×</button>
-        ${S.lightboxType === 'image'
+            return `<div class="lightbox" onclick="S.modal=null;render()">
+    <button class="lightbox-close" onclick="S.modal=null;render()">×</button>
+    ${S.lightboxType === 'image'
                     ? `<img src="${esc(S.lightboxSrc)}" onclick="event.stopPropagation()">`
                     : `<video src="${esc(S.lightboxSrc)}" controls autoplay onclick="event.stopPropagation()"></video>`}
-    </div>`;
+  </div>`
         }
 
-        /* ═══════════════ BOOT ═══════════════ */
         init();
     </script>
 </body>
